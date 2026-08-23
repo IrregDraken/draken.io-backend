@@ -9,7 +9,13 @@ export async function registerAuthRoutes(
   dependencies: { clients: SupabaseClients; repository: CompanyRepository; logger: Logger },
 ): Promise<void> {
   const authenticate = async (request: FastifyRequest, reply: FastifyReply) => {
-    await authenticateRequest(request, reply, dependencies.clients, dependencies.repository, dependencies.logger);
+    await authenticateRequest(
+      request,
+      reply,
+      dependencies.clients,
+      dependencies.repository,
+      dependencies.logger,
+    );
   };
 
   app.get('/api/v1/me', { preHandler: authenticate }, async (request, reply) => {

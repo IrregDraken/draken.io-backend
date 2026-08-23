@@ -35,12 +35,20 @@ export async function authenticateRequest(
     return;
   }
 
-  const user: AuthenticatedUser = { id: data.user.id, email: data.user.email, role: data.user.role };
+  const user: AuthenticatedUser = {
+    id: data.user.id,
+    email: data.user.email,
+    role: data.user.role,
+  };
   const memberships = await repository.getMembershipsForUser(user.id);
   request.context = { user, memberships };
 }
 
-export function requireMembership(request: FastifyRequest, reply: FastifyReply, companyId: string): boolean {
+export function requireMembership(
+  request: FastifyRequest,
+  reply: FastifyReply,
+  companyId: string,
+): boolean {
   const context = request.context as RequestContext | undefined;
   if (!context) {
     void reply.code(401).send({ error: 'authentication_required' });

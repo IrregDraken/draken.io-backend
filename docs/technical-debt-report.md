@@ -1,0 +1,61 @@
+# Engineering cleanup and technical-debt report
+
+**Repository:** `IrregDraken/draken.io-backend`
+**Scope:** Behavior-preserving cleanup of the Draken-owned backend and frontend surfaces. The unrelated `harolds_place/` product was not modified.
+
+## Summary
+
+The cleanup focused on removing objectively dead code, clarifying dependency boundaries, making strict typing meaningful, and converting the frontend from a single oversized module into maintainable component modules. Working APIs, persistence behavior, authorization rules, integration contracts, and user-facing copy were preserved.
+
+The repository now has a real formatter and ESLint flat configuration, scoped formatter scripts, compiler-level unused-code checks, typed frontend API responses, explicit database-row conversions, narrow service ports, a deterministic quality gate, and a 21-test suite that remains green.
+
+## Changes made
+
+| Area               | Cleanup                                                                                                                             | Why it was safe                                                                                 |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| Dead services      | Removed unreferenced `OrchestratorService` and `MessageBusService` wrappers                                                         | Repository search found no callers; no route or application wiring depended on either class     |
+| Frontend structure | Split `App.tsx` into `auth.tsx`, `layout.tsx`, `views.tsx`, `components.tsx`, and `types.ts`                                        | Component bodies and handlers were preserved; only module boundaries and exports changed        |
+| Frontend API       | Replaced `unknown` public return types with typed response shapes; added safe JSON error parsing and URL encoding                   | Runtime requests and response paths remain the same, with safer failure handling                |
+| Service boundaries | `CommandService` now depends on `AIProviderLookup` and `MissionWriter`; `ToolExecutionService` depends on `ToolExecutionRepository` | Concrete implementations still satisfy the ports; tests no longer require broad casts           |
+| Repository typing  | Replaced `Record<string, any>` with `Record<string, unknown>` and explicit conversion helpers                                       | API mapping remains equivalent while invalid database shapes no longer leak into domain objects |
+| Dead declarations  | Removed unused `useMemo`, `companyName` shell prop, auth request type import, and unused tool-parameter schema                      | Lint proved these values had no effect on reachable behavior                                    |
+| Formatting         | Added `.prettierrc.json`, `.prettierignore`, and a scoped `format:check` command                                                    | Formatting is deterministic and does not rewrite the separate restaurant product                |
+| Static analysis    | Added ESLint 9 flat config with TypeScript rules and enabled `noUnusedLocals`/`noUnusedParameters`                                  | Existing errors were fixed; the project now rejects the cleaned-up failure classes in CI        |
+| Build scripts      | Added `build:product`, `typecheck:all`, and scoped formatting commands                                                              | Backend and frontend can be checked and built consistently from the repository root             |
+| Temporary files    | Removed the one-off extraction script and kept generated `public/` output ignored                                                   | Build output is derived from versioned frontend source and recreated by CI/Docker               |
+
+## Deliberately not changed
+
+The cleanup did not rewrite database schemas, change route paths, alter authorization policy, change Telegram behavior, change AI provider request formats, modify the unrelated Harold’s Place application, or remove public API functions merely because the current frontend does not call them. Placeholder and unconfigured integration states were retained where they communicate a real operational limitation rather than pretending a connection exists.
+
+## Remaining technical debt
+
+| Priority | Item                                                                                              | Impact                                                                                       | Recommended next step                                                                                         |
+| -------- | ------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| High     | `ProductRepository` still contains a large set of Supabase query methods                          | Persistence policy and mapping logic are concentrated in one class                           | Split by domain ports—organization, work, tools, activity, and outbox—behind interfaces and integration tests |
+| High     | Frontend views still use broad `Record<string, unknown>` resource shapes                          | Compile-time guarantees do not cover every rendered company field                            | Generate or hand-maintain shared API DTOs from the backend route contracts                                    |
+| High     | Supabase migrations were not applied in this environment                                          | SQL correctness was statically reviewed but not exercised against Postgres                   | Apply migrations to a disposable linked Supabase project and run integration tests with RLS enabled           |
+| Medium   | The frontend has no component-test or browser end-to-end suite                                    | Auth, empty states, and forms are compiler/build verified but not interaction tested in CI   | Add a browser test runner with mocked API fixtures and one authenticated test environment                     |
+| Medium   | The command center creates an unassigned mission but does not yet select an agent or enqueue work | Natural-language planning is real, but autonomous execution remains intentionally incomplete | Add explicit company policy, agent selection, task planning, and approval gates before execution              |
+| Medium   | Message-bus persistence is present but not wired to a long-lived worker                           | Events can be stored, but no production consumer process is claimed                          | Add a persistent worker or managed queue with leases, retries, dead-letter handling, and metrics              |
+| Medium   | Provider health checks perform remote calls when credentials exist                                | Readiness can become dependent on provider latency or quota                                  | Add bounded caching, circuit breaking, and separate configured-versus-live readiness semantics                |
+| Low      | Route handlers repeat parameter parsing and membership checks                                     | Repetition increases maintenance cost as the API grows                                       | Introduce a typed route helper only after adding route-level integration coverage                             |
+| Low      | Docker image build was not executed locally                                                       | The Dockerfile is statically reviewed but not runtime-proven in this sandbox                 | Build and run the image in CI or a Docker-enabled deployment environment                                      |
+
+## Verification
+
+| Check                        | Result                                                                                                                                                                                                             |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `pnpm format:check`          | Passed                                                                                                                                                                                                             |
+| `pnpm lint`                  | Passed with zero errors and zero warnings                                                                                                                                                                          |
+| `pnpm typecheck:all`         | Passed for backend and frontend                                                                                                                                                                                    |
+| `pnpm test`                  | Passed: 7 files, 21 tests                                                                                                                                                                                          |
+| `pnpm build:product`         | Passed: backend TypeScript compile and frontend Vite production build                                                                                                                                              |
+| `git diff --check`           | Passed                                                                                                                                                                                                             |
+| Compiled-server smoke check  | `/` and `/health/live` returned 200; `/health/ready` returned the expected 503 unconfigured status; the protected company route returned 503 before authentication because Supabase was intentionally unconfigured |
+| Supabase migration execution | Not run; Supabase/PostgreSQL tooling was unavailable                                                                                                                                                               |
+| Docker image build           | Not run; Docker CLI was unavailable                                                                                                                                                                                |
+
+## Outcome
+
+The codebase is materially easier to review and maintain without a behavior-changing rewrite. The most consequential improvements are the removal of unreachable wrappers, the explicit service ports, strict row conversion, safe client error parsing, and the frontend module split. Remaining debt is now named and bounded rather than hidden behind generic abstractions or placeholder success states.

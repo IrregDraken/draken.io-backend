@@ -75,12 +75,17 @@ export interface AIProvider {
 export interface NotificationService {
   readonly channel: 'telegram' | 'email';
   isConfigured(): boolean;
-  send(input: { recipient: string; subject?: string; body: string }): Promise<{ delivered: boolean; detail: string }>;
+  send(input: {
+    recipient: string;
+    subject?: string;
+    body: string;
+  }): Promise<{ delivered: boolean; detail: string }>;
 }
 
 export type MissionStage = 'created' | 'planning' | 'executing' | 'review' | 'completed' | 'failed';
 export type MissionPriority = 1 | 2 | 3 | 4 | 5;
-export type TaskStatus = 'backlog' | 'todo' | 'in_progress' | 'blocked' | 'done' | 'cancelled' | 'failed';
+export type TaskStatus =
+  'backlog' | 'todo' | 'in_progress' | 'blocked' | 'done' | 'cancelled' | 'failed';
 
 export type Department = {
   id: string;

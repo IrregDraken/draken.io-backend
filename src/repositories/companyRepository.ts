@@ -22,8 +22,15 @@ export class CompanyRepository {
 
     return ((data ?? []) as DatabaseRow[]).flatMap((row) => {
       const company = row.companies as DatabaseRow | null;
-      if (!company || typeof row.company_id !== 'string' || typeof company.name !== 'string') return [];
-      return [{ companyId: row.company_id, companyName: company.name, membershipRole: String(row.role ?? 'member') }];
+      if (!company || typeof row.company_id !== 'string' || typeof company.name !== 'string')
+        return [];
+      return [
+        {
+          companyId: row.company_id,
+          companyName: company.name,
+          membershipRole: String(row.role ?? 'member'),
+        },
+      ];
     });
   }
 
@@ -32,7 +39,9 @@ export class CompanyRepository {
     return memberships.find((membership) => membership.companyId === companyId) ?? null;
   }
 
-  async getCompany(companyId: string): Promise<{ id: string; name: string; slug: string; status: string } | null> {
+  async getCompany(
+    companyId: string,
+  ): Promise<{ id: string; name: string; slug: string; status: string } | null> {
     const client = requireAdmin(this.admin);
     const { data, error } = await client
       .from('companies')
@@ -41,15 +50,31 @@ export class CompanyRepository {
       .maybeSingle();
     if (error) throw error;
     if (!data) return null;
-    return { id: String(data.id), name: String(data.name), slug: String(data.slug), status: String(data.status) };
+    return {
+      id: String(data.id),
+      name: String(data.name),
+      slug: String(data.slug),
+      status: String(data.status),
+    };
   }
 
   async getSummary(companyId: string): Promise<CompanySummary> {
     const client = requireAdmin(this.admin);
-    const tables = ['employees', 'missions', 'projects', 'tasks', 'channels', 'messages', 'notifications'] as const;
+    const tables = [
+      'employees',
+      'missions',
+      'projects',
+      'tasks',
+      'channels',
+      'messages',
+      'notifications',
+    ] as const;
     const countEntries = await Promise.all(
       tables.map(async (table) => {
-        const result = await client.from(table).select('id', { count: 'exact', head: true }).eq('company_id', companyId);
+        const result = await client
+          .from(table)
+          .select('id', { count: 'exact', head: true })
+          .eq('company_id', companyId);
         if (result.error) throw result.error;
         return [table, result.count ?? 0] as const;
       }),
@@ -92,7 +117,11 @@ export class CompanyRepository {
     const table = resourceTables[resource];
     if (!table) throw new Error(`Unsupported company resource: ${resource}`);
     const client = requireAdmin(this.admin);
-    const { data, error } = await client.from(table).select('*').eq('company_id', companyId).limit(100);
+    const { data, error } = await client
+      .from(table)
+      .select('*')
+      .eq('company_id', companyId)
+      .limit(100);
     if (error) throw error;
     return (data ?? []) as Array<Record<string, unknown>>;
   }

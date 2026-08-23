@@ -18,7 +18,13 @@ export async function registerCompanyRoutes(
   dependencies: { clients: SupabaseClients; repository: CompanyRepository; logger: Logger },
 ): Promise<void> {
   const authenticate = async (request: FastifyRequest, reply: FastifyReply) => {
-    await authenticateRequest(request, reply, dependencies.clients, dependencies.repository, dependencies.logger);
+    await authenticateRequest(
+      request,
+      reply,
+      dependencies.clients,
+      dependencies.repository,
+      dependencies.logger,
+    );
   };
 
   app.get('/api/v1/companies/:companyId', { preHandler: authenticate }, async (request, reply) => {
@@ -30,28 +36,37 @@ export async function registerCompanyRoutes(
     return reply.send({ company });
   });
 
-  app.get('/api/v1/companies/:companyId/summary', { preHandler: authenticate }, async (request, reply) => {
-    const params = paramsSchema.safeParse(request.params);
-    if (!params.success) return reply.code(400).send({ error: 'invalid_company_id' });
-    if (!requireMembership(request, reply, params.data.companyId)) return;
-    const summary = await dependencies.repository.getSummary(params.data.companyId);
-    return reply.send({ summary });
-  });
+  app.get(
+    '/api/v1/companies/:companyId/summary',
+    { preHandler: authenticate },
+    async (request, reply) => {
+      const params = paramsSchema.safeParse(request.params);
+      if (!params.success) return reply.code(400).send({ error: 'invalid_company_id' });
+      if (!requireMembership(request, reply, params.data.companyId)) return;
+      const summary = await dependencies.repository.getSummary(params.data.companyId);
+      return reply.send({ summary });
+    },
+  );
 
-  app.post('/api/v1/companies/:companyId/events', { preHandler: authenticate }, async (request, reply) => {
-    const params = paramsSchema.safeParse(request.params);
-    const body = eventSchema.safeParse(request.body);
-    if (!params.success) return reply.code(400).send({ error: 'invalid_company_id' });
-    if (!body.success) return reply.code(400).send({ error: 'invalid_event', details: body.error.flatten() });
-    if (!requireMembership(request, reply, params.data.companyId)) return;
-    const eventId = await dependencies.repository.appendEvent({
-      companyId: params.data.companyId,
-      actorUserId: request.context?.user.id,
-      eventType: body.data.eventType,
-      entityType: body.data.entityType,
-      entityId: body.data.entityId,
-      payload: body.data.payload,
-    });
-    return reply.code(201).send({ eventId });
-  });
+  app.post(
+    '/api/v1/companies/:companyId/events',
+    { preHandler: authenticate },
+    async (request, reply) => {
+      const params = paramsSchema.safeParse(request.params);
+      const body = eventSchema.safeParse(request.body);
+      if (!params.success) return reply.code(400).send({ error: 'invalid_company_id' });
+      if (!body.success)
+        return reply.code(400).send({ error: 'invalid_event', details: body.error.flatten() });
+      if (!requireMembership(request, reply, params.data.companyId)) return;
+      const eventId = await dependencies.repository.appendEvent({
+        companyId: params.data.companyId,
+        actorUserId: request.context?.user.id,
+        eventType: body.data.eventType,
+        entityType: body.data.entityType,
+        entityId: body.data.entityId,
+        payload: body.data.payload,
+      });
+      return reply.code(201).send({ eventId });
+    },
+  );
 }

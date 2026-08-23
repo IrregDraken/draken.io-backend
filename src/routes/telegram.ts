@@ -15,7 +15,9 @@ export async function registerTelegramRoutes(
     if (!request.body || typeof request.body !== 'object') {
       return reply.code(400).send({ error: 'invalid_telegram_update' });
     }
-    await dependencies.commands.handleUpdate(normalizeTelegramUpdate(request.body as Record<string, unknown>));
+    await dependencies.commands.handleUpdate(
+      normalizeTelegramUpdate(request.body as Record<string, unknown>),
+    );
     return reply.code(200).send({ ok: true });
   });
 }

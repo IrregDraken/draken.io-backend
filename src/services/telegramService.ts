@@ -21,31 +21,49 @@ export class TelegramCommandService {
     if (!message || !from || !text) return;
 
     if (!this.authorizedUserIds.includes(from.id)) {
-      await this.client.sendMessage(message.chat.id, 'This bot is private. Your Telegram account is not authorized.');
+      await this.client.sendMessage(
+        message.chat.id,
+        'This bot is private. Your Telegram account is not authorized.',
+      );
       this.logger.warn({ telegramUserId: from.id }, 'Rejected unauthorized Telegram user');
       return;
     }
 
     const membership = await this.repository.getTelegramMembership(from.id);
     if (!membership) {
-      await this.client.sendMessage(message.chat.id, 'Your Telegram account is allow-listed but is not mapped to an active company membership.');
-      this.logger.warn({ telegramUserId: from.id }, 'Rejected Telegram user without active company mapping');
+      await this.client.sendMessage(
+        message.chat.id,
+        'Your Telegram account is allow-listed but is not mapped to an active company membership.',
+      );
+      this.logger.warn(
+        { telegramUserId: from.id },
+        'Rejected Telegram user without active company mapping',
+      );
       return;
     }
 
     const command = text.split(/\s+/u)[0]?.split('@')[0]?.toLowerCase();
     switch (command) {
       case '/start':
-        await this.client.sendMessage(message.chat.id, `Connected to ${membership.companyName}. Use /help to see available commands.`);
+        await this.client.sendMessage(
+          message.chat.id,
+          `Connected to ${membership.companyName}. Use /help to see available commands.`,
+        );
         return;
       case '/help':
-        await this.client.sendMessage(message.chat.id, '/start — connect to the company bot\n/help — list commands\n/ping — check Telegram connectivity\n/status — show real backend health and company state');
+        await this.client.sendMessage(
+          message.chat.id,
+          '/start — connect to the company bot\n/help — list commands\n/ping — check Telegram connectivity\n/status — show real backend health and company state',
+        );
         return;
       case '/ping':
         await this.client.sendMessage(message.chat.id, 'pong');
         return;
       case '/status': {
-        const [health, summary] = await Promise.all([this.getHealth(), this.repository.getSummary(membership.companyId)]);
+        const [health, summary] = await Promise.all([
+          this.getHealth(),
+          this.repository.getSummary(membership.companyId),
+        ]);
         await this.client.sendMessage(message.chat.id, formatStatus(health, summary));
         return;
       }
@@ -56,7 +74,10 @@ export class TelegramCommandService {
 }
 
 function formatStatus(health: HealthReport, summary: CompanySummary): string {
-  const componentLines = Object.entries(health.components).map(([name, component]) => `${name}: ${component.status}${component.detail ? ` (${component.detail})` : ''}`);
+  const componentLines = Object.entries(health.components).map(
+    ([name, component]) =>
+      `${name}: ${component.status}${component.detail ? ` (${component.detail})` : ''}`,
+  );
   return [
     `Backend: ${health.status}`,
     ...componentLines,

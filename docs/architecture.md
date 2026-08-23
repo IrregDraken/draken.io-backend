@@ -24,15 +24,15 @@ The database migration models the following bounded domains: authentication and 
 
 The integration ports are deliberately small and provider-neutral:
 
-| Contract | Responsibility | Initial state |
-| --- | --- | --- |
-| `NotificationService` | Deliver a notification through an external channel | Telegram adapter implemented; email adapter returns unavailable until configured |
-| `TelegramGateway` | Send messages, receive updates, configure webhook, and inspect health | Implemented with real Bot API calls when credentials exist |
-| `AIProvider` | Generate model output through a provider adapter | Registry and adapters are explicit; no provider is claimed connected without credentials and a successful health check |
-| `GitHubIntegration` | Provide a seam for repository activity | Interface only, unavailable until credentials and implementation are added |
-| `EmailIntegration` | Provide a seam for Resend or another email provider | Interface only, unavailable until credentials and implementation are added |
-| `ZapierIntegration` | Deliver outbound automation events | Interface only, unavailable until a webhook is configured |
-| `DockerSandboxIntegration` | Execute isolated sandbox jobs | Interface only, unavailable until a sandbox endpoint is configured |
+| Contract                   | Responsibility                                                        | Initial state                                                                                                          |
+| -------------------------- | --------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `NotificationService`      | Deliver a notification through an external channel                    | Telegram adapter implemented; email adapter returns unavailable until configured                                       |
+| `TelegramGateway`          | Send messages, receive updates, configure webhook, and inspect health | Implemented with real Bot API calls when credentials exist                                                             |
+| `AIProvider`               | Generate model output through a provider adapter                      | Registry and adapters are explicit; no provider is claimed connected without credentials and a successful health check |
+| `GitHubIntegration`        | Provide a seam for repository activity                                | Interface only, unavailable until credentials and implementation are added                                             |
+| `EmailIntegration`         | Provide a seam for Resend or another email provider                   | Interface only, unavailable until credentials and implementation are added                                             |
+| `ZapierIntegration`        | Deliver outbound automation events                                    | Interface only, unavailable until a webhook is configured                                                              |
+| `DockerSandboxIntegration` | Execute isolated sandbox jobs                                         | Interface only, unavailable until a sandbox endpoint is configured                                                     |
 
 Employee identity is separate from provider identity. An employee record stores a display name and a provider reference, while `ai_providers` stores provider configuration metadata. The orchestrator depends on `AIProvider` and never hardcodes provider behavior into mission or task code.
 
@@ -40,15 +40,15 @@ Employee identity is separate from provider identity. An employee record stores 
 
 The initial API is intentionally small and truthful:
 
-| Route | Authentication | Purpose |
-| --- | --- | --- |
-| `GET /health/live` | Public | Process liveness only |
-| `GET /health/ready` | Public | Database and configured integration readiness |
-| `GET /api/v1/me` | Supabase JWT | Authenticated identity and company memberships |
-| `GET /api/v1/companies/:companyId` | Supabase JWT + membership | Company metadata |
-| `GET /api/v1/companies/:companyId/summary` | Supabase JWT + membership | Real counts and recent activity, with empty values when no records exist |
-| `POST /api/v1/companies/:companyId/events` | Supabase JWT + membership | Append a company event through the event service |
-| `POST /integrations/telegram/webhook` | Telegram secret header when configured | Receive Telegram updates |
+| Route                                      | Authentication                         | Purpose                                                                  |
+| ------------------------------------------ | -------------------------------------- | ------------------------------------------------------------------------ |
+| `GET /health/live`                         | Public                                 | Process liveness only                                                    |
+| `GET /health/ready`                        | Public                                 | Database and configured integration readiness                            |
+| `GET /api/v1/me`                           | Supabase JWT                           | Authenticated identity and company memberships                           |
+| `GET /api/v1/companies/:companyId`         | Supabase JWT + membership              | Company metadata                                                         |
+| `GET /api/v1/companies/:companyId/summary` | Supabase JWT + membership              | Real counts and recent activity, with empty values when no records exist |
+| `POST /api/v1/companies/:companyId/events` | Supabase JWT + membership              | Append a company event through the event service                         |
+| `POST /integrations/telegram/webhook`      | Telegram secret header when configured | Receive Telegram updates                                                 |
 
 ## Operational principles
 

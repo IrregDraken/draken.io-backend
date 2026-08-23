@@ -2,7 +2,7 @@
   "name": "draken-industries-backend",
   "version": "0.1.0",
   "private": true,
-  "description": "Production backend foundation for Draken Industries",
+  "description": "Authenticated operating system backend and frontend for Draken Industries",
   "type": "module",
   "engines": {
     "node": ">=20"
@@ -17,7 +17,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint .",
-    "format": "prettier --write .",
+    "format": "prettier --write 'src/**/*.ts' 'tests/**/*.ts' 'frontend/src/**/*.{ts,tsx}' 'frontend/*.ts' '*.json' '.github/workflows/quality.yml' '*.md' 'docs/**/*.md'",
+    "format:check": "prettier --check 'src/**/*.ts' 'tests/**/*.ts' 'frontend/src/**/*.{ts,tsx}' 'frontend/*.ts' '*.json' '.github/workflows/quality.yml' '*.md' 'docs/**/*.md'",
     "db:push": "supabase db push",
     "db:reset": "supabase db reset"
   },
@@ -25,8 +26,8 @@
     "@fastify/cors": "^10.0.2",
     "@fastify/helmet": "^13.0.1",
     "@fastify/rate-limit": "^10.3.0",
-    "@fastify/static": "^8.2.0",
     "@fastify/sensible": "^6.0.3",
+    "@fastify/static": "^8.2.0",
     "@supabase/supabase-js": "^2.57.4",
     "dotenv": "^17.2.1",
     "fastify": "^5.5.0",
@@ -34,11 +35,14 @@
     "zod": "^4.0.17"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/node": "^24.3.0",
     "eslint": "^9.33.0",
+    "eslint-config-prettier": "^10.1.8",
     "prettier": "^3.6.2",
     "tsx": "^4.20.3",
     "typescript": "^5.9.2",
+    "typescript-eslint": "^8.67.0",
     "vitest": "^3.2.4"
   }
 }

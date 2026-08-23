@@ -8,18 +8,23 @@ const emptyToUndefined = (value: unknown): unknown => {
 
 const csvUserIds = z.preprocess(
   emptyToUndefined,
-  z.string().transform((value) =>
-    value
-      .split(',')
-      .map((part) => part.trim())
-      .filter(Boolean)
-      .map((part) => {
-        if (!/^\d+$/.test(part)) {
-          throw new Error('TELEGRAM_AUTHORIZED_USER_IDS must contain only numeric Telegram user IDs');
-        }
-        return Number(part);
-      }),
-  ).optional(),
+  z
+    .string()
+    .transform((value) =>
+      value
+        .split(',')
+        .map((part) => part.trim())
+        .filter(Boolean)
+        .map((part) => {
+          if (!/^\d+$/.test(part)) {
+            throw new Error(
+              'TELEGRAM_AUTHORIZED_USER_IDS must contain only numeric Telegram user IDs',
+            );
+          }
+          return Number(part);
+        }),
+    )
+    .optional(),
 );
 
 const schema = z.object({
@@ -83,10 +88,16 @@ export type Config = {
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   const parsed = schema.parse(env);
-  const hasAnySupabase = Boolean(parsed.SUPABASE_URL || parsed.SUPABASE_ANON_KEY || parsed.SUPABASE_SERVICE_ROLE_KEY);
-  const hasAllSupabase = Boolean(parsed.SUPABASE_URL && parsed.SUPABASE_ANON_KEY && parsed.SUPABASE_SERVICE_ROLE_KEY);
+  const hasAnySupabase = Boolean(
+    parsed.SUPABASE_URL || parsed.SUPABASE_ANON_KEY || parsed.SUPABASE_SERVICE_ROLE_KEY,
+  );
+  const hasAllSupabase = Boolean(
+    parsed.SUPABASE_URL && parsed.SUPABASE_ANON_KEY && parsed.SUPABASE_SERVICE_ROLE_KEY,
+  );
   if (hasAnySupabase && !hasAllSupabase) {
-    throw new Error('SUPABASE_URL, SUPABASE_ANON_KEY, and SUPABASE_SERVICE_ROLE_KEY must be configured together');
+    throw new Error(
+      'SUPABASE_URL, SUPABASE_ANON_KEY, and SUPABASE_SERVICE_ROLE_KEY must be configured together',
+    );
   }
   if (parsed.TELEGRAM_MODE !== 'disabled' && !parsed.TELEGRAM_BOT_TOKEN) {
     throw new Error('TELEGRAM_BOT_TOKEN is required when TELEGRAM_MODE is not disabled');
@@ -94,7 +105,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   if (parsed.TELEGRAM_MODE === 'webhook' && !parsed.TELEGRAM_WEBHOOK_URL) {
     throw new Error('TELEGRAM_WEBHOOK_URL is required when TELEGRAM_MODE=webhook');
   }
-  if (parsed.NODE_ENV === 'production' && parsed.TELEGRAM_MODE === 'webhook' && !parsed.TELEGRAM_WEBHOOK_SECRET) {
+  if (
+    parsed.NODE_ENV === 'production' &&
+    parsed.TELEGRAM_MODE === 'webhook' &&
+    !parsed.TELEGRAM_WEBHOOK_SECRET
+  ) {
     throw new Error('TELEGRAM_WEBHOOK_SECRET is required for production Telegram webhooks');
   }
 
@@ -107,7 +122,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     webDir: parsed.WEB_DIR,
     rateLimitMax: parsed.RATE_LIMIT_MAX,
     rateLimitWindow: parsed.RATE_LIMIT_WINDOW,
-    corsOrigins: parsed.CORS_ORIGINS ? parsed.CORS_ORIGINS.split(',').map((origin) => origin.trim()).filter(Boolean) : [],
+    corsOrigins: parsed.CORS_ORIGINS
+      ? parsed.CORS_ORIGINS.split(',')
+          .map((origin) => origin.trim())
+          .filter(Boolean)
+      : [],
     supabaseUrl: parsed.SUPABASE_URL,
     supabaseAnonKey: parsed.SUPABASE_ANON_KEY,
     supabaseServiceRoleKey: parsed.SUPABASE_SERVICE_ROLE_KEY,

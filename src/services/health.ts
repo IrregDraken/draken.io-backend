@@ -3,7 +3,12 @@ import type { ComponentHealth, HealthReport } from '../domain.js';
 import type { AIProviderRegistry } from '../integrations/ai.js';
 import type { TelegramClient } from '../integrations/telegram.js';
 import type { SupabaseClients } from '../supabase.js';
-import type { DockerSandboxIntegration, GitHubIntegration, ZapierIntegration, EmailIntegration } from '../integrations/external.js';
+import type {
+  DockerSandboxIntegration,
+  GitHubIntegration,
+  ZapierIntegration,
+  EmailIntegration,
+} from '../integrations/external.js';
 
 export class HealthService {
   constructor(
@@ -43,19 +48,37 @@ export class HealthService {
     }
 
     const statuses = Object.values(components).map((component) => component.status);
-    const status = statuses.includes('error') ? 'error' : statuses.includes('unconfigured') ? 'unconfigured' : 'ok';
-    return { status, service: 'draken-industries-backend', checkedAt: new Date().toISOString(), components };
+    const status = statuses.includes('error')
+      ? 'error'
+      : statuses.includes('unconfigured')
+        ? 'unconfigured'
+        : 'ok';
+    return {
+      status,
+      service: 'draken-industries-backend',
+      checkedAt: new Date().toISOString(),
+      components,
+    };
   }
 
   private async databaseHealth(): Promise<ComponentHealth> {
-    if (!this.clients.admin || !this.clients.configured) return { status: 'unconfigured', detail: 'Supabase is not configured' };
+    if (!this.clients.admin || !this.clients.configured)
+      return { status: 'unconfigured', detail: 'Supabase is not configured' };
     try {
-      const { error } = await this.clients.admin.from('companies').select('id', { count: 'exact', head: true });
+      const { error } = await this.clients.admin
+        .from('companies')
+        .select('id', { count: 'exact', head: true });
       if (error) throw error;
       return { status: 'ok', detail: 'Supabase is reachable' };
     } catch (error) {
-      this.logger.error({ error: error instanceof Error ? error.message : 'unknown error' }, 'Database health check failed');
-      return { status: 'error', detail: error instanceof Error ? error.message : 'Database health check failed' };
+      this.logger.error(
+        { error: error instanceof Error ? error.message : 'unknown error' },
+        'Database health check failed',
+      );
+      return {
+        status: 'error',
+        detail: error instanceof Error ? error.message : 'Database health check failed',
+      };
     }
   }
 }

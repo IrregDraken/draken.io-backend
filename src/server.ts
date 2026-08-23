@@ -5,7 +5,10 @@ const config = loadConfig();
 const runtime = await buildApp(config);
 
 await runtime.app.listen({ host: config.host, port: config.port });
-runtime.app.log.info({ host: config.host, port: config.port, telegramMode: config.telegramMode }, 'Backend started');
+runtime.app.log.info(
+  { host: config.host, port: config.port, telegramMode: config.telegramMode },
+  'Backend started',
+);
 
 if (config.telegramMode === 'webhook' && config.telegramWebhookUrl) {
   await runtime.telegram.setWebhook(config.telegramWebhookUrl);

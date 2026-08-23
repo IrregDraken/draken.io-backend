@@ -8,27 +8,27 @@ The root project is a TypeScript ESM Fastify backend. The root contains no front
 
 ## Root Draken backend classification
 
-| Area | State | Evidence |
-| --- | --- | --- |
-| HTTP server | Working at baseline | Fastify app composition and health/auth/company routes; compiler and 18 tests pass |
-| Supabase persistence | Implemented but unverified | Migration and repository exist; no Supabase credentials, CLI, or live database in this environment |
-| Authentication | Partially working | JWT validation boundary exists; registration, login, logout, session persistence, and recovery routes are absent |
-| Authorization | Partially working | Membership checks and RLS exist; role-based mutation policy and administrative provisioning are incomplete |
-| AI providers | Missing live adapters | Provider-neutral interface and explicit unavailable adapters exist; orchestration only delegates to an unavailable provider |
-| AI employees | Data model only | Employee fields exist, but no agent lifecycle, assignment engine, activity/performance model, or agent execution loop exists |
-| Missions | Minimal read/event model | Mission table exists; mission creation, lifecycle transitions, planning, assignment, progress, outputs, and failure handling are absent |
-| Tasks | Minimal table | Task table exists; dependencies, priority, retries, execution, logs, outputs, and backend task engine are absent |
-| Events | Append-only route/model | Events table and append endpoint exist; no durable bus/queue, consumers, or replay/idempotency layer exists |
-| Message bus | Missing | No Redis, queue, or reliable component communication layer is present |
-| Tool system | Missing | No tool registry, tool schemas, permission assignments, or tool execution audit model is present |
-| Telegram | Adapter implemented but unconnected | Real Bot API client and commands exist; no token or authorized user IDs were present |
-| GitHub | Interface-only | No real repository inspection/issue/commit adapter exists |
-| Frontend | Missing at root | No root Vite/React or other Draken UI application exists |
-| Settings/admin | Missing | No settings routes/UI, onboarding, owner/admin workflows, or profile lifecycle routes exist |
-| Logging | Partially working | Structured Pino logging and redaction exist; mission/task/tool correlation and durable log records are absent |
-| Tests | Baseline passing but incomplete | 6 test files and 18 tests cover current foundation only; no mission/task/agent/tool/database integration suite exists |
-| Deployment | Partial | Dockerfile and health endpoints exist; CI/CD for the root service, migration execution, and live deployment verification are absent |
-| Documentation | Partial | README, architecture, Telegram research, and prior implementation report exist; they describe a foundation rather than a complete product |
+| Area                 | State                               | Evidence                                                                                                                                  |
+| -------------------- | ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| HTTP server          | Working at baseline                 | Fastify app composition and health/auth/company routes; compiler and 18 tests pass                                                        |
+| Supabase persistence | Implemented but unverified          | Migration and repository exist; no Supabase credentials, CLI, or live database in this environment                                        |
+| Authentication       | Partially working                   | JWT validation boundary exists; registration, login, logout, session persistence, and recovery routes are absent                          |
+| Authorization        | Partially working                   | Membership checks and RLS exist; role-based mutation policy and administrative provisioning are incomplete                                |
+| AI providers         | Missing live adapters               | Provider-neutral interface and explicit unavailable adapters exist; orchestration only delegates to an unavailable provider               |
+| AI employees         | Data model only                     | Employee fields exist, but no agent lifecycle, assignment engine, activity/performance model, or agent execution loop exists              |
+| Missions             | Minimal read/event model            | Mission table exists; mission creation, lifecycle transitions, planning, assignment, progress, outputs, and failure handling are absent   |
+| Tasks                | Minimal table                       | Task table exists; dependencies, priority, retries, execution, logs, outputs, and backend task engine are absent                          |
+| Events               | Append-only route/model             | Events table and append endpoint exist; no durable bus/queue, consumers, or replay/idempotency layer exists                               |
+| Message bus          | Missing                             | No Redis, queue, or reliable component communication layer is present                                                                     |
+| Tool system          | Missing                             | No tool registry, tool schemas, permission assignments, or tool execution audit model is present                                          |
+| Telegram             | Adapter implemented but unconnected | Real Bot API client and commands exist; no token or authorized user IDs were present                                                      |
+| GitHub               | Interface-only                      | No real repository inspection/issue/commit adapter exists                                                                                 |
+| Frontend             | Missing at root                     | No root Vite/React or other Draken UI application exists                                                                                  |
+| Settings/admin       | Missing                             | No settings routes/UI, onboarding, owner/admin workflows, or profile lifecycle routes exist                                               |
+| Logging              | Partially working                   | Structured Pino logging and redaction exist; mission/task/tool correlation and durable log records are absent                             |
+| Tests                | Baseline passing but incomplete     | 6 test files and 18 tests cover current foundation only; no mission/task/agent/tool/database integration suite exists                     |
+| Deployment           | Partial                             | Dockerfile and health endpoints exist; CI/CD for the root service, migration execution, and live deployment verification are absent       |
+| Documentation        | Partial                             | README, architecture, Telegram research, and prior implementation report exist; they describe a foundation rather than a complete product |
 
 ## Harold's Place subtree
 

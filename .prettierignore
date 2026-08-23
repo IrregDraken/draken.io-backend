@@ -1,0 +1,7 @@
+harolds_place/
+docs/restaurant-research.md
+.github/workflows/harolds-place-backend.yml
+node_modules/
+frontend/node_modules/
+dist/
+public/

@@ -46,17 +46,32 @@ export async function buildApp(config: Config): Promise<Runtime> {
   const toolRegistry = new ToolRegistry();
   const toolExecutionService = new ToolExecutionService(productRepository, toolRegistry, logger);
   const taskEngine = new TaskEngineService(productRepository, logger);
-  const telegram = new TelegramClient(config.telegramBotToken, config.telegramWebhookSecret, logger);
+  const telegram = new TelegramClient(
+    config.telegramBotToken,
+    config.telegramWebhookSecret,
+    logger,
+  );
   const providers = new AIProviderRegistry(config);
   const commandService = new CommandService(providers, productRepository);
   const external = createExternalIntegrations(config);
   const health = new HealthService(clients, telegram, providers, external, logger);
-  const commands = new TelegramCommandService(telegram, repository, config.telegramAuthorizedUserIds, () => health.ready(), logger);
+  const commands = new TelegramCommandService(
+    telegram,
+    repository,
+    config.telegramAuthorizedUserIds,
+    () => health.ready(),
+    logger,
+  );
 
   const app = Fastify({
     logger: {
       level: config.logLevel,
-      redact: ['req.headers.authorization', 'req.headers.cookie', 'headers.authorization', 'headers.cookie'],
+      redact: [
+        'req.headers.authorization',
+        'req.headers.cookie',
+        'headers.authorization',
+        'headers.cookie',
+      ],
     },
   });
   await app.register(helmet);
@@ -78,16 +93,40 @@ export async function buildApp(config: Config): Promise<Runtime> {
   await registerAuthLifecycleRoutes(app, { auth: authService, clients, repository, logger });
   await registerCompanyRoutes(app, { clients, repository, logger });
   await registerResourceRoutes(app, { clients, repository, logger });
-  await registerProductRoutes(app, { clients, companyRepository: repository, productRepository, tools: toolExecutionService, taskEngine, logger });
-  await registerGitHubRoutes(app, { clients, companyRepository: repository, github: external.github, logger });
-  await registerCommandRoutes(app, { clients, companyRepository: repository, productRepository, providers, commands: commandService, logger });
+  await registerProductRoutes(app, {
+    clients,
+    companyRepository: repository,
+    productRepository,
+    tools: toolExecutionService,
+    taskEngine,
+    logger,
+  });
+  await registerGitHubRoutes(app, {
+    clients,
+    companyRepository: repository,
+    github: external.github,
+    logger,
+  });
+  await registerCommandRoutes(app, {
+    clients,
+    companyRepository: repository,
+    productRepository,
+    providers,
+    commands: commandService,
+    logger,
+  });
   await registerTelegramRoutes(app, { client: telegram, commands });
   const webRoot = path.resolve(config.webDir);
   if (existsSync(path.join(webRoot, 'index.html'))) {
     await app.register(fastifyStatic, { root: webRoot, wildcard: false, index: false });
     app.get('/', async (_request, reply) => reply.sendFile('index.html'));
     app.get('/*', async (request, reply) => {
-      if (request.url.startsWith('/api/') || request.url.startsWith('/health/') || request.url.startsWith('/integrations/')) return reply.code(404).send({ error: 'not_found' });
+      if (
+        request.url.startsWith('/api/') ||
+        request.url.startsWith('/health/') ||
+        request.url.startsWith('/integrations/')
+      )
+        return reply.code(404).send({ error: 'not_found' });
       return reply.sendFile('index.html');
     });
   }

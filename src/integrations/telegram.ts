@@ -3,7 +3,12 @@ import type { ComponentHealth, NotificationService, TelegramUpdate } from '../do
 
 const TELEGRAM_API = 'https://api.telegram.org';
 
-type TelegramApiResponse<T> = { ok: boolean; result?: T; description?: string; error_code?: number };
+type TelegramApiResponse<T> = {
+  ok: boolean;
+  result?: T;
+  description?: string;
+  error_code?: number;
+};
 
 type UpdateHandler = (update: TelegramUpdate) => Promise<void>;
 
@@ -16,19 +21,30 @@ export class TelegramNotificationService implements NotificationService {
     return this.client.isConfigured();
   }
 
-  async send(input: { recipient: string; subject?: string; body: string }): Promise<{ delivered: boolean; detail: string }> {
-    if (!/^-?\d+$/.test(input.recipient)) return { delivered: false, detail: 'Telegram recipient must be a numeric chat ID' };
+  async send(input: {
+    recipient: string;
+    subject?: string;
+    body: string;
+  }): Promise<{ delivered: boolean; detail: string }> {
+    if (!/^-?\d+$/.test(input.recipient))
+      return { delivered: false, detail: 'Telegram recipient must be a numeric chat ID' };
     try {
       await this.client.sendMessage(input.recipient, input.body);
       return { delivered: true, detail: 'Telegram message delivered' };
     } catch (error) {
-      return { delivered: false, detail: error instanceof Error ? error.message : 'Telegram delivery failed' };
+      return {
+        delivered: false,
+        detail: error instanceof Error ? error.message : 'Telegram delivery failed',
+      };
     }
   }
 }
 
 export class TelegramApiError extends Error {
-  constructor(message: string, readonly statusCode?: number) {
+  constructor(
+    message: string,
+    readonly statusCode?: number,
+  ) {
     super(message);
     this.name = 'TelegramApiError';
   }
@@ -53,12 +69,19 @@ export class TelegramClient {
   }
 
   async healthCheck(): Promise<ComponentHealth> {
-    if (!this.token) return { status: 'unconfigured', detail: 'TELEGRAM_BOT_TOKEN is not configured' };
+    if (!this.token)
+      return { status: 'unconfigured', detail: 'TELEGRAM_BOT_TOKEN is not configured' };
     try {
       const result = await this.call<{ id: number; username?: string }>('getMe', {});
-      return { status: 'ok', detail: `Telegram bot reachable${result.username ? ` as @${result.username}` : ''}` };
+      return {
+        status: 'ok',
+        detail: `Telegram bot reachable${result.username ? ` as @${result.username}` : ''}`,
+      };
     } catch (error) {
-      return { status: 'error', detail: error instanceof Error ? error.message : 'Telegram health check failed' };
+      return {
+        status: 'error',
+        detail: error instanceof Error ? error.message : 'Telegram health check failed',
+      };
     }
   }
 
@@ -74,7 +97,11 @@ export class TelegramClient {
     await this.call('deleteWebhook', { drop_pending_updates: false });
   }
 
-  async getWebhookInfo(): Promise<{ url: string; pending_update_count: number; last_error_message?: string }> {
+  async getWebhookInfo(): Promise<{
+    url: string;
+    pending_update_count: number;
+    last_error_message?: string;
+  }> {
     return this.call('getWebhookInfo', {});
   }
 
@@ -103,7 +130,10 @@ export class TelegramClient {
             await handler(update);
           }
         } catch (error) {
-          this.logger.error({ error: error instanceof Error ? error.message : 'unknown error' }, 'Telegram polling error');
+          this.logger.error(
+            { error: error instanceof Error ? error.message : 'unknown error' },
+            'Telegram polling error',
+          );
           await new Promise((resolve) => setTimeout(resolve, backoffMs));
           backoffMs = Math.min(backoffMs * 2, 30_000);
         }
@@ -126,7 +156,10 @@ export class TelegramClient {
     });
     const payload = (await response.json()) as TelegramApiResponse<T>;
     if (!response.ok || !payload.ok || payload.result === undefined) {
-      throw new TelegramApiError(payload.description ?? `Telegram API request failed for ${method}`, response.status);
+      throw new TelegramApiError(
+        payload.description ?? `Telegram API request failed for ${method}`,
+        response.status,
+      );
     }
     return payload.result;
   }
@@ -138,20 +171,21 @@ export function normalizeTelegramUpdate(update: Record<string, unknown>): Telegr
   const from = message?.from as Record<string, unknown> | undefined;
   return {
     updateId: Number(update.update_id),
-    message: message && chat
-      ? {
-          messageId: Number(message.message_id),
-          chat: { id: Number(chat.id), type: String(chat.type) },
-          from: from
-            ? {
-                id: Number(from.id),
-                isBot: Boolean(from.is_bot),
-                firstName: typeof from.first_name === 'string' ? from.first_name : undefined,
-                username: typeof from.username === 'string' ? from.username : undefined,
-              }
-            : undefined,
-          text: typeof message.text === 'string' ? message.text : undefined,
-        }
-      : undefined,
+    message:
+      message && chat
+        ? {
+            messageId: Number(message.message_id),
+            chat: { id: Number(chat.id), type: String(chat.type) },
+            from: from
+              ? {
+                  id: Number(from.id),
+                  isBot: Boolean(from.is_bot),
+                  firstName: typeof from.first_name === 'string' ? from.first_name : undefined,
+                  username: typeof from.username === 'string' ? from.username : undefined,
+                }
+              : undefined,
+            text: typeof message.text === 'string' ? message.text : undefined,
+          }
+        : undefined,
   };
 }
