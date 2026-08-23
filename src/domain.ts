@@ -25,6 +25,9 @@ export type CompanySummary = {
     channels: number;
     messages: number;
     notifications: number;
+    departments: number;
+    tools: number;
+    activeOrchestrations: number;
   };
   recentEvents: Array<{
     id: string;
@@ -73,6 +76,114 @@ export interface NotificationService {
   readonly channel: 'telegram' | 'email';
   isConfigured(): boolean;
   send(input: { recipient: string; subject?: string; body: string }): Promise<{ delivered: boolean; detail: string }>;
+}
+
+export type MissionStage = 'created' | 'planning' | 'executing' | 'review' | 'completed' | 'failed';
+export type MissionPriority = 1 | 2 | 3 | 4 | 5;
+export type TaskStatus = 'backlog' | 'todo' | 'in_progress' | 'blocked' | 'done' | 'cancelled' | 'failed';
+
+export type Department = {
+  id: string;
+  companyId: string;
+  name: string;
+  description?: string;
+};
+
+export type Employee = {
+  id: string;
+  companyId: string;
+  displayName: string;
+  roleId?: string;
+  providerId?: string;
+  departmentId?: string;
+  description?: string;
+  capabilities: unknown;
+  tools: unknown;
+  status: string;
+  currentMissionId?: string;
+  currentTaskId?: string;
+  currentAssignment?: string;
+};
+
+export type Mission = {
+  id: string;
+  companyId: string;
+  title: string;
+  description?: string;
+  objective?: string;
+  priority: number;
+  deadline?: string;
+  status: string;
+  stage: MissionStage;
+  progress: number;
+  assignedAgentIds: string[];
+  taskCount: number;
+  outputCount: number;
+  failureReason?: string;
+};
+
+export type Task = {
+  id: string;
+  companyId: string;
+  missionId?: string;
+  projectId?: string;
+  assigneeEmployeeId?: string;
+  title: string;
+  description?: string;
+  status: TaskStatus;
+  priority: number;
+  retryLimit: number;
+  retryCount: number;
+  blockedReason?: string;
+  dueAt?: string;
+  output?: unknown;
+  failureReason?: string;
+  startedAt?: string;
+  completedAt?: string;
+};
+
+export type ToolDefinition = {
+  id: string;
+  companyId: string;
+  name: string;
+  description: string;
+  inputSchema: unknown;
+  outputSchema: unknown;
+  permissions: unknown;
+  status: string;
+};
+
+export type ToolExecutionRequest = {
+  companyId: string;
+  toolId: string;
+  employeeId?: string;
+  taskId?: string;
+  input: Record<string, unknown>;
+};
+
+export type ActivityItem = {
+  id: string;
+  activityType: string;
+  message: string;
+  missionId?: string;
+  taskId?: string;
+  toolExecutionId?: string;
+  createdAt: string;
+  metadata: Record<string, unknown>;
+};
+
+export type BusEvent = {
+  id: string;
+  companyId?: string;
+  eventType: string;
+  aggregateType?: string;
+  aggregateId?: string;
+  payload: Record<string, unknown>;
+};
+
+export interface ToolHandler {
+  readonly name: string;
+  execute(input: Record<string, unknown>): Promise<Record<string, unknown>>;
 }
 
 export type TelegramUser = {

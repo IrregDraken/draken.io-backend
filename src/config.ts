@@ -27,6 +27,10 @@ const schema = z.object({
   HOST: z.string().default('127.0.0.1'),
   PORT: z.coerce.number().int().positive().max(65535).default(3000),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
+  PUBLIC_APP_URL: z.preprocess(emptyToUndefined, z.string().url().optional()),
+  WEB_DIR: z.preprocess(emptyToUndefined, z.string().default('public')),
+  RATE_LIMIT_MAX: z.coerce.number().int().positive().default(120),
+  RATE_LIMIT_WINDOW: z.string().default('1 minute'),
   CORS_ORIGINS: z.preprocess(emptyToUndefined, z.string().optional()),
   SUPABASE_URL: z.preprocess(emptyToUndefined, z.string().url().optional()),
   SUPABASE_ANON_KEY: z.preprocess(emptyToUndefined, z.string().optional()),
@@ -38,9 +42,12 @@ const schema = z.object({
   TELEGRAM_MODE: z.enum(['polling', 'webhook', 'disabled']).default('disabled'),
   GITHUB_TOKEN: z.preprocess(emptyToUndefined, z.string().optional()),
   RESEND_API_KEY: z.preprocess(emptyToUndefined, z.string().optional()),
+  RESEND_FROM_EMAIL: z.preprocess(emptyToUndefined, z.string().email().optional()),
   ZAPIER_WEBHOOK_URL: z.preprocess(emptyToUndefined, z.string().url().optional()),
   DOCKER_SANDBOX_URL: z.preprocess(emptyToUndefined, z.string().url().optional()),
+  DOCKER_SANDBOX_TOKEN: z.preprocess(emptyToUndefined, z.string().optional()),
   OPENAI_API_KEY: z.preprocess(emptyToUndefined, z.string().optional()),
+  OPENAI_API_BASE: z.preprocess(emptyToUndefined, z.string().url().optional()),
   ANTHROPIC_API_KEY: z.preprocess(emptyToUndefined, z.string().optional()),
   GOOGLE_GEMINI_API_KEY: z.preprocess(emptyToUndefined, z.string().optional()),
   MANUS_API_KEY: z.preprocess(emptyToUndefined, z.string().optional()),
@@ -51,6 +58,10 @@ export type Config = {
   host: string;
   port: number;
   logLevel: 'fatal' | 'error' | 'warn' | 'info' | 'debug' | 'trace' | 'silent';
+  publicAppUrl?: string;
+  webDir: string;
+  rateLimitMax: number;
+  rateLimitWindow: string;
   corsOrigins: string[];
   supabaseUrl?: string;
   supabaseAnonKey?: string;
@@ -62,9 +73,12 @@ export type Config = {
   telegramMode: 'polling' | 'webhook' | 'disabled';
   githubToken?: string;
   resendApiKey?: string;
+  resendFromEmail?: string;
   zapierWebhookUrl?: string;
   dockerSandboxUrl?: string;
+  dockerSandboxToken?: string;
   providerKeys: Record<string, string | undefined>;
+  providerBaseUrls: Record<string, string | undefined>;
 };
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
@@ -89,6 +103,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     host: parsed.HOST,
     port: parsed.PORT,
     logLevel: parsed.LOG_LEVEL,
+    publicAppUrl: parsed.PUBLIC_APP_URL,
+    webDir: parsed.WEB_DIR,
+    rateLimitMax: parsed.RATE_LIMIT_MAX,
+    rateLimitWindow: parsed.RATE_LIMIT_WINDOW,
     corsOrigins: parsed.CORS_ORIGINS ? parsed.CORS_ORIGINS.split(',').map((origin) => origin.trim()).filter(Boolean) : [],
     supabaseUrl: parsed.SUPABASE_URL,
     supabaseAnonKey: parsed.SUPABASE_ANON_KEY,
@@ -100,13 +118,16 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     telegramMode: parsed.TELEGRAM_MODE,
     githubToken: parsed.GITHUB_TOKEN,
     resendApiKey: parsed.RESEND_API_KEY,
+    resendFromEmail: parsed.RESEND_FROM_EMAIL,
     zapierWebhookUrl: parsed.ZAPIER_WEBHOOK_URL,
     dockerSandboxUrl: parsed.DOCKER_SANDBOX_URL,
+    dockerSandboxToken: parsed.DOCKER_SANDBOX_TOKEN,
     providerKeys: {
       openai: parsed.OPENAI_API_KEY,
       anthropic: parsed.ANTHROPIC_API_KEY,
       googleGemini: parsed.GOOGLE_GEMINI_API_KEY,
       manus: parsed.MANUS_API_KEY,
     },
+    providerBaseUrls: { openai: parsed.OPENAI_API_BASE },
   };
 }

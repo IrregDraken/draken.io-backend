@@ -4,7 +4,7 @@ import type { AuthenticatedUser, RequestContext } from './domain.js';
 import { CompanyRepository } from './repositories/companyRepository.js';
 import type { SupabaseClients } from './supabase.js';
 
-function bearerToken(request: FastifyRequest): string | null {
+export function bearerToken(request: FastifyRequest): string | null {
   const value = request.headers.authorization;
   if (!value?.startsWith('Bearer ')) return null;
   const token = value.slice('Bearer '.length).trim();

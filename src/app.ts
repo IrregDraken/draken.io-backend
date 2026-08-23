@@ -1,5 +1,9 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
+import rateLimit from '@fastify/rate-limit';
+import fastifyStatic from '@fastify/static';
+import path from 'node:path';
+import { existsSync } from 'node:fs';
 import helmet from '@fastify/helmet';
 import sensible from '@fastify/sensible';
 import type { Config } from './config.js';
@@ -16,6 +20,15 @@ import { registerAuthRoutes } from './routes/auth.js';
 import { registerCompanyRoutes } from './routes/company.js';
 import { registerResourceRoutes } from './routes/resources.js';
 import { registerTelegramRoutes } from './routes/telegram.js';
+import { AuthService } from './services/authService.js';
+import { registerAuthLifecycleRoutes } from './routes/authLifecycle.js';
+import { ProductRepository } from './repositories/productRepository.js';
+import { ToolRegistry, ToolExecutionService } from './services/toolRegistry.js';
+import { registerProductRoutes } from './routes/product.js';
+import { TaskEngineService } from './services/taskEngine.js';
+import { registerGitHubRoutes } from './routes/github.js';
+import { CommandService } from './services/commandService.js';
+import { registerCommandRoutes } from './routes/command.js';
 
 export type Runtime = {
   app: FastifyInstance;
@@ -28,8 +41,14 @@ export async function buildApp(config: Config): Promise<Runtime> {
   const logger = createLogger(config);
   const clients = createSupabaseClients(config);
   const repository = new CompanyRepository(clients.admin);
+  const productRepository = new ProductRepository(clients.admin);
+  const authService = new AuthService(clients);
+  const toolRegistry = new ToolRegistry();
+  const toolExecutionService = new ToolExecutionService(productRepository, toolRegistry, logger);
+  const taskEngine = new TaskEngineService(productRepository, logger);
   const telegram = new TelegramClient(config.telegramBotToken, config.telegramWebhookSecret, logger);
   const providers = new AIProviderRegistry(config);
+  const commandService = new CommandService(providers, productRepository);
   const external = createExternalIntegrations(config);
   const health = new HealthService(clients, telegram, providers, external, logger);
   const commands = new TelegramCommandService(telegram, repository, config.telegramAuthorizedUserIds, () => health.ready(), logger);
@@ -42,6 +61,7 @@ export async function buildApp(config: Config): Promise<Runtime> {
   });
   await app.register(helmet);
   await app.register(sensible);
+  await app.register(rateLimit, { max: config.rateLimitMax, timeWindow: config.rateLimitWindow });
   await app.register(cors, {
     origin: config.corsOrigins.length > 0 ? config.corsOrigins : false,
     credentials: config.corsOrigins.length > 0,
@@ -55,9 +75,22 @@ export async function buildApp(config: Config): Promise<Runtime> {
 
   await registerHealthRoutes(app, health);
   await registerAuthRoutes(app, { clients, repository, logger });
+  await registerAuthLifecycleRoutes(app, { auth: authService, clients, repository, logger });
   await registerCompanyRoutes(app, { clients, repository, logger });
   await registerResourceRoutes(app, { clients, repository, logger });
+  await registerProductRoutes(app, { clients, companyRepository: repository, productRepository, tools: toolExecutionService, taskEngine, logger });
+  await registerGitHubRoutes(app, { clients, companyRepository: repository, github: external.github, logger });
+  await registerCommandRoutes(app, { clients, companyRepository: repository, productRepository, providers, commands: commandService, logger });
   await registerTelegramRoutes(app, { client: telegram, commands });
+  const webRoot = path.resolve(config.webDir);
+  if (existsSync(path.join(webRoot, 'index.html'))) {
+    await app.register(fastifyStatic, { root: webRoot, wildcard: false, index: false });
+    app.get('/', async (_request, reply) => reply.sendFile('index.html'));
+    app.get('/*', async (request, reply) => {
+      if (request.url.startsWith('/api/') || request.url.startsWith('/health/') || request.url.startsWith('/integrations/')) return reply.code(404).send({ error: 'not_found' });
+      return reply.sendFile('index.html');
+    });
+  }
 
   return { app, telegram, commands, health };
 }

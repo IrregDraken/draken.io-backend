@@ -34,7 +34,7 @@ export class HealthService {
       database: await this.databaseHealth(),
       telegram: await this.telegram.healthCheck(),
       github: await this.external.github.healthCheck(),
-      email: { status: this.external.email.isConfigured() ? 'unconfigured' : 'unconfigured', detail: 'Email adapter is not implemented; no delivery is claimed' },
+      email: await this.external.email.healthCheck(),
       zapier: await this.external.zapier.healthCheck(),
       dockerSandbox: await this.external.dockerSandbox.healthCheck(),
     };

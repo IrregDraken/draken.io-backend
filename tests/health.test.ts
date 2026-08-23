@@ -7,11 +7,10 @@ import { HealthService } from '../src/services/health.js';
 import type { Config } from '../src/config.js';
 
 const config: Config = {
-  nodeEnv: 'test', host: '127.0.0.1', port: 3000, logLevel: 'silent', corsOrigins: [],
-  telegramAuthorizedUserIds: [], telegramMode: 'disabled', providerKeys: {},
+  nodeEnv: 'test', host: '127.0.0.1', port: 3000, logLevel: 'silent', publicAppUrl: undefined, webDir: 'public', rateLimitMax: 120, rateLimitWindow: '1 minute', corsOrigins: [],
+  telegramAuthorizedUserIds: [], telegramMode: 'disabled', providerKeys: {}, providerBaseUrls: {},
 };
 
-function defineConfig(value: Config): Config { return value; }
 
 describe('HealthService', () => {
   it('reports liveness independently of integrations', () => {

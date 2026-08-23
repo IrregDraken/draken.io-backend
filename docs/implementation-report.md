@@ -1,158 +1,185 @@
-# Draken Industries backend implementation report
+# Draken Industries product completion report
 
 **Author:** Manus AI
 **Repository:** `IrregDraken/draken.io-backend`
-**Implementation date:** 14 August 2026
-**Starting state:** The selected repository was empty: no commits, source files, dependencies, Supabase configuration, deployment configuration, or existing application code were present.
+**Implementation date:** 23 August 2026
+**Scope:** Extend the existing Draken backend foundation into a coherent authenticated product with a same-product frontend, company-scoped work systems, real provider/integration adapters, and verified deployment surfaces.
 
 ## Executive summary
 
-A complete backend foundation was created inside the existing repository. The implementation is a strict TypeScript ESM service using Fastify for HTTP, Supabase Auth and Postgres for authentication and persistence, Postgres row-level security for company boundaries, Pino for structured logging, and an explicit integration-port design.
+The repository was audited before modification. The root Draken project already contained a buildable Fastify/Supabase foundation and a Telegram adapter. The later `harolds_place/` subtree was confirmed to be a separate restaurant ordering product and was preserved unchanged. The root repository had no Draken frontend and did not have complete authentication lifecycle, mission execution, task engine, message-bus, tool permission, or live AI/external adapters.
 
-Telegram is the first real external adapter. The adapter implements Bot API calls for bot health, messages, polling, webhook configuration, webhook inspection, and deletion. The command service implements `/start`, `/help`, `/ping`, and `/status`. Access requires both a configured Telegram user-ID allow-list and an active database authorization mapping to a company; a bot token alone is insufficient.
+The implementation now adds a React/Vite command-room frontend, production-oriented Supabase migration extensions, real signup/login/logout/password-recovery/profile endpoints, department and company resource routes, guarded mission and task lifecycles, dependency-aware task starts and retry limits, a durable outbox-style message bus, a permission-aware tool registry and execution service, a command center that creates missions only from valid structured provider output, live OpenAI/Anthropic/Gemini adapters, authenticated GitHub operations, Resend email delivery, Zapier webhook delivery, Docker sandbox HTTP jobs, global rate limiting, conditional static serving, CI quality checks, and combined Docker build configuration.
 
-No fake companies, AI employees, missions, tasks, messages, activity, or integration responses were seeded. Because no Supabase or Telegram credentials were present in the execution environment, neither external service was claimed as connected. The readiness endpoint reports these components as `unconfigured`, and the final smoke test confirmed that behavior.
+No company, employee, mission, task, message, activity, or integration rows were seeded. No external integration was claimed as connected except the sandbox’s OpenAI-compatible health endpoint, which was reached through the configured `OPENAI_API_BASE`; Supabase, Telegram, GitHub, Resend, Zapier, and Docker sandbox remained unconfigured in the final runtime smoke test. The system correctly reported those states rather than fabricating operational data.
 
-## Architecture created
+## Actual repository state at audit
 
-The backend is divided into the following boundaries:
+| Area | Audited state | Completion work |
+| --- | --- | --- |
+| Backend | Buildable Fastify foundation | Extended routes, repositories, services, adapters, rate limiting, and static serving |
+| Database | Initial company-scoped schema with RLS | Added departments, profiles, settings, mission lifecycle, task attempts/logs/dependencies, tools, executions, activity, and message-bus tables |
+| Authentication | JWT validation and `/me` | Added signup, login, logout, password reset, session, and profile endpoints |
+| Authorization | Membership checks and RLS | Added cross-company foreign-key validation on new repository writes and explicit tool assignment checks |
+| AI | Provider-neutral unavailable adapters | Added real OpenAI-compatible, Anthropic, and Gemini HTTP adapters; Manus remains explicit unavailable |
+| Missions | Basic table/event model | Added title/objective/priority/stage/progress, agent assignment relation, output relation, transitions, and command-created missions |
+| Tasks | Basic table | Added guarded transitions, dependency checks, retry accounting, timestamps, outputs, failures, task engine routes, logs, and activities |
+| Message bus | Absent | Added persisted outbox events, optimistic claiming, consumer registration, processing, and failure states |
+| Tools | Absent | Added registry, JSON-schema-lite validation, employee assignment enforcement, execution persistence, and activity records |
+| GitHub | Interface-only | Added authenticated repository, commit, and issue operations |
+| Email | Interface-only | Added Resend delivery and health check |
+| Zapier | Interface-only | Added webhook publishing with per-event delivery result |
+| Docker sandbox | Interface-only | Added authenticated `/health` and `/jobs` HTTP adapter |
+| Frontend | Absent at root | Added responsive React/Vite frontend built into `public/` and served by Fastify |
+| Deployment | Backend Dockerfile only | Dockerfile now builds both artifacts; CI validates backend and frontend |
+
+## Architecture delivered
+
+The product is divided into explicit boundaries so vendor connections and authorization policy are not mixed into UI code or domain logic.
 
 | Boundary | Implementation | Responsibility |
 | --- | --- | --- |
-| HTTP runtime | Fastify 5 | Secure HTTP server, routing, request lifecycle, JSON responses |
-| Authentication | Supabase Auth client | Validate bearer JWTs and derive authenticated users |
-| Authorization | `CompanyRepository`, `requireMembership`, Postgres RLS | Require active company membership at both application and database layers |
-| Persistence | Supabase Postgres | Company-scoped domain models and migrations |
-| Domain services | `HealthService`, `TelegramCommandService`, `OrchestratorService` | Business behavior independent of vendor clients |
-| AI boundary | `AIProvider` and `AIProviderRegistry` | Provider-neutral abstraction for OpenAI, Anthropic, Google Gemini, and Manus |
-| Notifications | `NotificationService` | Channel-neutral notification contract; Telegram is implemented, email remains unavailable |
-| External integrations | GitHub, email/Resend, Zapier, Docker sandbox interfaces | Explicit seams and truthful unavailable adapters |
-| Observability | Pino plus Fastify logging | Structured logs with secret redaction |
-| Deployment | Dockerfile, `.env.example`, Supabase migration/config | Reproducible build and explicit runtime configuration |
+| HTTP runtime | Fastify 5 | Routing, lifecycle, security middleware, JSON responses, rate limiting |
+| Authentication | Supabase Auth clients | Signup, login, password recovery, logout, session validation, bearer identity |
+| Authorization | `CompanyRepository`, `ProductRepository`, route membership checks, RLS | Company membership enforcement and cross-company write validation |
+| Persistence | Supabase Postgres | Company, identity, work, tool, activity, message, and integration state |
+| Mission planning | `CommandService`, `AIProviderRegistry` | Structured provider output becomes a persisted, unassigned mission |
+| Task execution | `TaskEngineService` | Dependency-aware starts, guarded transitions, retries, completion, and failure |
+| Message bus | `MessageBusService` plus `message_bus_events` | Durable outbox event publishing and consumer processing |
+| Tool system | `ToolRegistry`, `ToolExecutionService` | Handler registration, input checks, employee assignment, execution audit |
+| Notifications | `NotificationService` | Telegram and Resend adapters behind channel-neutral interfaces |
+| External services | GitHub, Zapier, Docker sandbox adapters | Real HTTP operations only when configured; otherwise explicit unconfigured state |
+| Frontend | React 19 + Vite | Auth, onboarding, company switcher, dashboard, work surfaces, system health, command center |
+| Observability | Pino with redaction | Structured runtime logging without authorization, cookie, bot-token, or provider-key leakage |
+| Deployment | Multi-stage Dockerfile and GitHub Actions | Reproducible backend/frontend build and automated quality gate |
 
-The orchestrator communicates through the `AIProvider` interface. Employee identity is kept separate from provider identity: an employee stores display name, role, department, personality, system instructions, capabilities, permissions, status, and current assignment, while `ai_providers` stores provider metadata and status.
+## Database changes
 
-Telegram update delivery was implemented with explicit polling and webhook modes. Telegram documents `getUpdates` and webhooks as mutually exclusive update-delivery methods, and webhook requests can be protected with the `X-Telegram-Bot-Api-Secret-Token` header [1]. A current deployment guide also confirms long polling as the simpler local-development option and HTTPS webhooks as the public deployment option [2].
+The original foundation migration remains intact. `supabase/migrations/202608230001_product_completion.sql` extends it with the following structures and constraints:
 
-## Files created
+| Domain | Added tables/fields |
+| --- | --- |
+| Organization | `departments`, `company_settings`, company description/identity/settings/timezone |
+| User identity | `user_profiles` |
+| Employees | department, current mission, current task, description |
+| Missions | title, objective, priority, stage, progress, outputs, failure reason, `mission_agents`, `mission_outputs` |
+| Tasks | priority, retry limit/count, output, failure reason, timestamps, `task_dependencies`, `task_attempts`, `task_logs` |
+| Tools | `tools`, `employee_tools`, `tool_executions` |
+| Observability | `activity_log` |
+| Messaging | `message_bus_events` with pending/processing/processed/failed state and retry attempts |
+
+The migration adds indexes, update triggers, and RLS policies. New repository writes explicitly verify that employees, missions, projects, tasks, and tools belong to the requested company before service-role operations are performed. The migration was statically reviewed but not applied to a live Supabase project because the environment did not provide the Supabase CLI or a PostgreSQL server.
+
+## Authentication and authorization
+
+The frontend stores only the Supabase access token in browser local storage. The service-role key is never accepted by the frontend and is only used by server-side repositories. API requests use:
+
+```text
+Authorization: Bearer <supabase-access-token>
+```
+
+The following lifecycle routes are implemented:
+
+| Route | Behavior |
+| --- | --- |
+| `POST /api/v1/auth/signup` | Creates an account and optional profile |
+| `POST /api/v1/auth/login` | Returns a Supabase session |
+| `POST /api/v1/auth/logout` | Performs a user-scoped local logout |
+| `POST /api/v1/auth/password-reset` | Requests a recovery email |
+| `GET /api/v1/auth/session` | Validates the current bearer token |
+| `PATCH /api/v1/auth/profile` | Updates the authenticated profile |
+| `GET /api/v1/me` | Returns the user and active company memberships |
+
+A user without membership is shown a deliberate access-pending state. The system does not create a default company or grant access automatically.
+
+## Product API surface
+
+| Area | Routes |
+| --- | --- |
+| Health | `GET /health/live`, `GET /health/ready` |
+| Company | Existing metadata, summary, and event routes |
+| Departments | `GET/POST /api/v1/companies/:companyId/departments` |
+| Agents | `GET /api/v1/companies/:companyId/agents` |
+| Missions | `GET/POST /api/v1/companies/:companyId/missions`, `PATCH /missions/:missionId/stage` |
+| Tasks | `GET/POST /api/v1/companies/:companyId/tasks`, status, start, retry, complete, fail, and dependency routes |
+| Activity | `GET /api/v1/companies/:companyId/activity` |
+| Tools | `GET/POST /api/v1/companies/:companyId/tools`, `POST /tool-executions` |
+| Command center | `POST /api/v1/companies/:companyId/commands` |
+| GitHub | Repository metadata, commits, and issue creation routes under `/integrations/github/repos/...` |
+| Generic resources | Existing explicit allow-list for persisted company resources |
+| Telegram | Existing secure webhook route and mode-aware polling/webhook startup |
+
+Mission transitions are guarded. Tasks with incomplete dependencies become blocked, not executing. Retry requests stop at the persisted retry limit. Tool execution requires an active tool and an explicit employee-tool assignment. Command-center planning rejects malformed model output before any mission is created.
+
+## Frontend delivered
+
+The root frontend is a responsive React/Vite product shell with a dark navy/gold operating visual system. It includes login and signup, explicit no-membership onboarding, company switching, overview metrics, recent-event stream, missions and mission creation, tasks and task creation, AI employee listing, departments and department creation, activity, integration/readiness cards, profile settings, and a natural-language command center.
+
+The frontend does not seed business data. It reads from the backend and renders empty, loading, error, or unconfigured states. The command center allows provider/model selection and invokes the backend planning endpoint; a missing provider credential appears as an actual error rather than a success toast.
+
+## Integration state
+
+| Integration | Implementation | Final runtime state |
+| --- | --- | --- |
+| OpenAI-compatible | HTTP `/models` and `/chat/completions` adapter with configurable base URL | Reachable through the sandbox base URL; public production endpoint remains configurable |
+| Anthropic | HTTP `/v1/models` and `/v1/messages` adapter | Unconfigured |
+| Gemini | HTTP model listing and `generateContent` adapter | Unconfigured |
+| Manus | Explicit unavailable adapter | Unconfigured/unavailable by design |
+| Telegram | Bot API polling/webhook adapter with secret header, allow-list, DB mapping, and notification service | Unconfigured |
+| GitHub | Authenticated repository/commit/issue API client | Unconfigured |
+| Resend | Authenticated send and domains health-check client | Unconfigured |
+| Zapier | Webhook publisher | Unconfigured |
+| Docker sandbox | Authenticated health/job HTTP client | Unconfigured |
+
+Telegram’s polling and webhook delivery modes remain mutually exclusive. Production webhook mode requires HTTPS and the configured secret header; local polling is intended for development [1] [2].
+
+## Security and operations
+
+The runtime now includes Helmet, CORS configuration, global request rate limiting, strict Zod validation, company membership enforcement, RLS-backed persistence, Pino redaction, bounded provider timeouts, and no-secret frontend configuration. Error responses are intentionally bounded and do not echo API keys or bot tokens.
+
+The Dockerfile uses separate build and runtime stages. The build stage compiles TypeScript and the React frontend; the runtime stage installs production dependencies and copies only `dist/` and `public/`. The GitHub Actions workflow runs backend type-checking, tests, backend build, frontend installation, frontend type-checking, and frontend build on pushes and pull requests to `main`.
+
+The repository did not contain a Docker binary, so the Docker image itself could not be built in this sandbox. The Dockerfile inputs and commands were reviewed statically.
+
+## Verification executed
+
+| Command/check | Result |
+| --- | --- |
+| `pnpm typecheck:all` | Passed: backend and frontend |
+| `pnpm test` | Passed: 7 test files, 21 tests |
+| `pnpm build:product` | Passed: backend compile and frontend Vite build |
+| Compiled server `/health/live` | HTTP 200 with `process: ok` |
+| Compiled server `/health/ready` | HTTP 503 with database/Telegram/GitHub/Resend/Zapier/Docker unconfigured and OpenAI-compatible health ok |
+| Compiled server `/` | HTTP 200 with `Draken Industries` HTML title |
+| Compiled server `/api/v1/me` | HTTP 503 with `authentication_unconfigured` when Supabase keys are absent |
+| Browser login view | Rendered successfully with correct dark command-room visual hierarchy |
+| Browser signup toggle | Rendered successfully with display name, username, email, and password fields |
+| Cross-company repository validation | Implemented and compiler-verified |
+| Supabase migration application | Not run; Supabase CLI/Postgres unavailable |
+| Docker image build | Not run; Docker CLI unavailable |
+
+The test suite covers configuration validation, health states, authentication boundaries, membership enforcement, Telegram security and notifications, live-provider adapter behavior through mocked HTTP, command structured-output boundaries, and tool execution denial without employee assignment.
+
+## Files added or materially changed
 
 | Area | Files |
 | --- | --- |
-| Project and deployment | `package.json`, `pnpm-lock.yaml`, `tsconfig.json`, `Dockerfile`, `.dockerignore`, `.env.example`, `.gitignore`, `README.md` |
-| Architecture and research | `docs/architecture.md`, `docs/research/telegram-integration-notes.md`, `docs/implementation-report.md` |
-| Runtime and configuration | `src/app.ts`, `src/server.ts`, `src/config.ts`, `src/logger.ts`, `src/supabase.ts`, `src/domain.ts`, `src/types.d.ts` |
-| Authentication and persistence | `src/auth.ts`, `src/repositories/companyRepository.ts` |
-| AI and external interfaces | `src/integrations/ai.ts`, `src/integrations/external.ts`, `src/services/orchestrator.ts` |
-| Telegram | `src/integrations/telegram.ts`, `src/services/telegramService.ts`, `src/routes/telegram.ts` |
-| Health and API routes | `src/services/health.ts`, `src/routes/health.ts`, `src/routes/auth.ts`, `src/routes/company.ts`, `src/routes/resources.ts` |
-| Database | `supabase/config.toml`, `supabase/migrations/202608140001_initial_foundation.sql` |
-| Tests | `tests/app.test.ts`, `tests/auth.test.ts`, `tests/config.test.ts`, `tests/health.test.ts`, `tests/integrations.test.ts`, `tests/telegram.test.ts` |
+| Product schema | `supabase/migrations/202608230001_product_completion.sql` |
+| Backend domain and persistence | `src/domain.ts`, `src/supabase.ts`, `src/config.ts`, `src/repositories/productRepository.ts` |
+| Auth lifecycle | `src/services/authService.ts`, `src/routes/authLifecycle.ts`, `src/auth.ts` |
+| Product services | `src/services/commandService.ts`, `src/services/taskEngine.ts`, `src/services/toolRegistry.ts`, `src/services/messageBus.ts` |
+| AI/external adapters | `src/integrations/ai.ts`, `src/integrations/github.ts`, `src/integrations/external.ts` |
+| Product routes | `src/routes/product.ts`, `src/routes/command.ts`, `src/routes/github.ts`, `src/app.ts` |
+| Frontend | `frontend/package.json`, `frontend/pnpm-lock.yaml`, `frontend/tsconfig.json`, `frontend/vite.config.ts`, `frontend/index.html`, `frontend/src/api.ts`, `frontend/src/App.tsx`, `frontend/src/main.tsx`, `frontend/src/styles.css` |
+| Deployment | `Dockerfile`, `package.json`, `.env.example`, `.github/workflows/quality.yml` |
+| Tests | `tests/product.test.ts`, updated integration/config/app/health tests |
+| Documentation | `README.md`, `docs/current-state-audit.md`, this report |
 
-No pre-existing files were modified because the repository was empty at the start.
+## Remaining limitations and required production steps
 
-## Database tables and models
+The remaining work is operational rather than hidden behind placeholder UI. A deployment owner must create/link the Supabase project, apply both migrations, configure Supabase Auth URLs and email delivery, provision the first company and active membership through an owner-controlled workflow, and supply integration credentials through the deployment secret manager. Telegram requires a real bot token, numeric allow-list, active database mapping, and either local polling or an HTTPS webhook. AI-generated plans create unassigned missions; agent selection, provider/model policy per company, and autonomous execution should be added only with explicit product policy and tool permissions.
 
-The migration creates the following tables. Every company-owned table has a `company_id` foreign key, indexes, and row-level security policies. The migration creates no rows.
-
-| Domain | Tables |
-| --- | --- |
-| Company and auth | `companies`, `company_memberships`, `roles` |
-| AI employees | `employees`, `ai_providers` |
-| Work management | `missions`, `projects`, `tasks` |
-| Company chat | `channels`, `channel_participants`, `messages`, `threads`, `thread_messages`, `message_reactions` |
-| Events and notifications | `events`, `notifications` |
-| Integrations | `integrations`, `telegram_authorizations` |
-| Orchestration | `orchestration_runs` |
-
-The schema includes status enums, timestamps, update triggers, foreign-key deletion behavior, partial uniqueness for nullable user/employee participants and reactions, and a global uniqueness constraint for Telegram user authorization to prevent ambiguous company mapping.
-
-## API routes
-
-| Route | Authentication | Result |
-| --- | --- | --- |
-| `GET /health/live` | Public | Process liveness; returns `200` when the process is running |
-| `GET /health/ready` | Public | Supabase and integration readiness; returns `503` when dependencies are unconfigured or failing |
-| `GET /api/v1/me` | Supabase JWT | Authenticated user and active company memberships |
-| `GET /api/v1/companies/:companyId` | Supabase JWT plus active membership | Company metadata |
-| `GET /api/v1/companies/:companyId/summary` | Supabase JWT plus active membership | Real counts for employees, missions, projects, tasks, channels, messages, notifications, and recent events |
-| `POST /api/v1/companies/:companyId/events` | Supabase JWT plus active membership | Append a company event |
-| `GET /api/v1/companies/:companyId/resources/:resource` | Supabase JWT plus active membership | Read records for the explicit resource allow-list: roles, employees, missions, projects, tasks, channels, messages, threads, events, notifications, integrations, AI providers, and orchestration runs |
-| `POST /integrations/telegram/webhook` | Telegram secret header when configured | Receive and process Telegram updates |
-
-## Authentication and authorization implementation
-
-API requests require `Authorization: Bearer <supabase-access-token>`. The backend validates the token through Supabase Auth. It then loads active company memberships and places the identity and memberships in the request context.
-
-Company routes call `requireMembership` before reading or writing company data. The migration also enables row-level security for all company-owned tables and defines `public.is_company_member(company_id)` using the authenticated Supabase user ID. This means an application-layer mistake is not the only security boundary.
-
-The service-role key is used only by server-side repository operations and is never returned to clients. The `.env.example` and `.gitignore` files keep secrets out of version control. Structured logging redacts authorization headers, cookies, bot tokens, and provider keys.
-
-## Telegram implementation
-
-The adapter includes real HTTP calls to Telegram Bot API methods `getMe`, `sendMessage`, `getUpdates`, `setWebhook`, `deleteWebhook`, and `getWebhookInfo`. `TelegramNotificationService` implements the channel-neutral `NotificationService` contract on top of that client. It supports:
-
-| Capability | Implementation state |
-| --- | --- |
-| Local polling | Implemented and enabled only with `TELEGRAM_MODE=polling` |
-| Production webhook | Implemented and enabled only with `TELEGRAM_MODE=webhook` and an HTTPS URL |
-| Secret-header validation | Implemented through `X-Telegram-Bot-Api-Secret-Token` |
-| User allow-list | Implemented through `TELEGRAM_AUTHORIZED_USER_IDS` |
-| Company mapping | Implemented through `telegram_authorizations` plus an active company membership |
-| `/start`, `/help`, `/ping` | Implemented |
-| `/status` | Implemented using live health and database counts; no fake business state |
-| Duplicate transport prevention | Implemented by explicit mutually exclusive mode and one polling loop |
-
-When an unauthorized user sends a command, the service denies access without exposing company data. When a user is present in the environment allow-list but has no active company mapping, the service denies company functionality and states that the mapping is missing.
-
-## Environment variables required
-
-The complete template is in `.env.example`.
-
-| Variable group | Variables | Required state |
-| --- | --- | --- |
-| Server | `NODE_ENV`, `HOST`, `PORT`, `LOG_LEVEL`, `CORS_ORIGINS` | Server defaults are provided; production should set explicit values |
-| Supabase | `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` | Required together for database-backed API use |
-| Telegram | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_AUTHORIZED_USER_IDS`, `TELEGRAM_MODE` | Required for a live Telegram connection; user IDs are never hardcoded |
-| Telegram webhooks | `TELEGRAM_WEBHOOK_URL`, `TELEGRAM_WEBHOOK_SECRET` | Required for production webhook mode |
-| External integration seams | `GITHUB_TOKEN`, `RESEND_API_KEY`, `ZAPIER_WEBHOOK_URL`, `DOCKER_SANDBOX_URL` | Optional; blank values are reported as unconfigured |
-| AI provider seams | `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GOOGLE_GEMINI_API_KEY`, `MANUS_API_KEY` | Optional; credentials alone do not claim a live adapter |
-
-## Tests executed and results
-
-The following commands were executed against the repository:
-
-| Command | Result |
-| --- | --- |
-| `./node_modules/.bin/tsc --noEmit -p tsconfig.json` | Passed |
-| `./node_modules/.bin/vitest run` | Passed: 6 test files, 18 tests |
-| `./node_modules/.bin/tsc -p tsconfig.json` | Passed; production output generated under ignored `dist/` |
-| Compiled-server smoke test with `NODE_ENV=test TELEGRAM_MODE=disabled LOG_LEVEL=error` | Passed: `/health/live` returned `200`, `/health/ready` returned `503` with truthful `unconfigured` components, and `/api/v1/me` returned `503` with `authentication_unconfigured` |
-
-The test suite covers configuration validation, Supabase authentication boundary behavior, company membership authorization, Telegram allow-list and command behavior, Telegram webhook secret validation, update normalization, health checks, explicit AI-provider unavailability, and Fastify HTTP routes.
-
-The environment did not include the Supabase CLI, PostgreSQL client, or Docker binary, so the SQL migration was not applied against a live local database in this session. It was reviewed statically and is committed for application through a linked Supabase project.
-
-## Integrations ready for credentials
-
-Supabase is ready for project URL and key configuration, followed by migration application. Telegram is ready for a real bot token, an explicit numeric allow-list, a database authorization mapping, and either local polling or an HTTPS webhook deployment. Its notification adapter is available through the `NotificationService` interface.
-
-GitHub, Resend/email, Zapier, and Docker sandbox have named interfaces and health-state seams, but their live adapters are intentionally pending. OpenAI, Anthropic, Google Gemini, and Manus have provider-neutral registry entries and explicit unavailable adapters, but no live model adapter is claimed connected.
-
-## Integrations actually connected
-
-**None were connected in this execution.** The environment check found all Supabase and Telegram variables absent. The implementation therefore reports external dependencies as unconfigured rather than inventing successful connectivity.
-
-## Remaining backend work
-
-The next implementation steps are to apply the migration to the target Supabase project, configure Supabase Auth settings and initial company memberships through an administrative provisioning flow, insert explicit Telegram authorization mappings, and perform a real Telegram smoke test with the intended bot. Live adapters for AI providers, GitHub activity, Resend/email, Zapier, and Docker sandbox remain to be implemented when their operational contracts and credentials are supplied.
-
-Production hardening should also add rate limiting, request correlation IDs, audit-log retention policy, secret rotation procedures, and an administrative membership-provisioning workflow. These were not silently invented because no product or operational requirements for them were supplied.
-
-## Blockers and assumptions
-
-The repository was empty, so TypeScript/Fastify/Supabase was selected as the new backend foundation rather than adapting an existing framework. No Supabase project URL, keys, Telegram bot token, authorized user IDs, webhook URL, or webhook secret were available. The current implementation intentionally stops at a credential-gated, test-verified foundation.
-
-The Telegram authorization model assumes one Telegram user maps to one company, enforced by a database uniqueness index, because the required commands do not include company selection. If a user must operate across multiple companies, the schema and command protocol should be extended explicitly rather than guessing.
+The codebase does not yet claim automatic company provisioning, arbitrary code execution, billing, multi-company Telegram selection, a production job scheduler, or a fully managed admin console. These should be implemented as explicit next phases rather than inferred from static dashboard affordances.
 
 ## References
 
