@@ -3,10 +3,15 @@ export type View =
   | 'missions'
   | 'tasks'
   | 'agents'
+  | 'workers'
+  | 'training'
   | 'departments'
   | 'activity'
+  | 'inbox'
+  | 'decisions'
   | 'command'
   | 'integrations'
-  | 'settings';
+  | 'settings'
+  | 'showcase';
 
 export type Notice = { kind: 'success' | 'error'; text: string } | null;

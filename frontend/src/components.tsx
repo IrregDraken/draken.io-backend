@@ -95,9 +95,14 @@ export function pageTitle(view: View): string {
     missions: 'Missions',
     tasks: 'Tasks',
     agents: 'AI employees',
+    workers: 'Worker workspace',
+    training: 'Training center',
     departments: 'Departments',
     activity: 'Activity',
+    inbox: 'Company inbox',
+    decisions: 'Decision log',
     integrations: 'System health',
     settings: 'Settings',
+    showcase: 'Company showcase',
   }[view];
 }

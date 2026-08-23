@@ -28,10 +28,15 @@ export function Shell({
     { id: 'missions', label: 'Missions', group: 'Work' },
     { id: 'tasks', label: 'Tasks', group: 'Work' },
     { id: 'agents', label: 'AI employees', group: 'Company' },
+    { id: 'workers', label: 'Worker workspace', group: 'Company' },
+    { id: 'training', label: 'Training center', group: 'Company' },
     { id: 'departments', label: 'Departments', group: 'Company' },
     { id: 'activity', label: 'Activity', group: 'Company' },
+    { id: 'inbox', label: 'Company inbox', group: 'Company' },
+    { id: 'decisions', label: 'Decision log', group: 'Company' },
     { id: 'integrations', label: 'Integrations', group: 'System' },
     { id: 'settings', label: 'Settings', group: 'System' },
+    { id: 'showcase', label: 'Company showcase', group: 'System' },
   ];
   const grouped = [...new Set(nav.map((item) => item.group))];
   return (

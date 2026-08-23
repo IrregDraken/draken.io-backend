@@ -22,6 +22,117 @@ export type HealthReport = {
   components: Record<string, { status: string; detail?: string }>;
 };
 
+export type Worker = {
+  id: string;
+  companyId: string;
+  name: string;
+  title?: string;
+  role?: string;
+  department?: string;
+  description?: string;
+  avatarUrl?: string;
+  providerKey?: string;
+  model?: string;
+  systemInstructions?: string;
+  responsibilities: unknown[];
+  operatingPrinciples: unknown[];
+  skills: Array<{ id: string; name: string; version: number; description: string }>;
+  permissions: Record<string, unknown>;
+  memoryConfig: Record<string, unknown>;
+  status: string;
+  currentMission?: string;
+  currentTask?: string;
+  version: number;
+  lastActiveAt?: string;
+  autonomyLevel: string;
+  publicVisible: boolean;
+  promotionLevel?: string;
+};
+
+export type TrainingLesson = {
+  id: string;
+  workerId: string;
+  title: string;
+  category: string;
+  lesson: string;
+  source: string;
+  examples: unknown[];
+  correction?: string;
+  status: string;
+  version: number;
+  createdAt: string;
+  activatedAt?: string;
+  latestReview?: { feedback: string; decision: string; createdAt: string };
+};
+
+export type WorkerPerformance = {
+  missionsCompleted: number;
+  tasksCompleted: number;
+  taskSuccessRate?: number;
+  evaluationScore?: number;
+  averageTaskDurationMs?: number;
+  toolFailures: number;
+  humanCorrections: number;
+  regressionEvents: number;
+  approvalFrequency?: number;
+  trainingLessons: number;
+  successfulImprovements: number;
+  latestEvaluation?: {
+    score?: number;
+    passedCases?: number;
+    totalCases?: number;
+    completedAt?: string;
+  };
+};
+
+export type CompanyShowcase = {
+  name: string;
+  slug: string;
+  description?: string;
+  industry?: string;
+  mission?: string;
+  workers: Array<{
+    id: string;
+    name: string;
+    title?: string;
+    role?: string;
+    bio?: string;
+    avatarUrl?: string;
+    skills: Array<{ name: string; version: number }>;
+    status: string;
+    promotionLevel?: string;
+  }>;
+  metrics: Record<string, unknown>;
+  workflows: unknown[];
+};
+
+export type EvaluationSet = {
+  id: string;
+  name: string;
+  category: string;
+  description: string;
+  passThreshold: number;
+  cases: Array<{ id: string; prompt: string; expectedBehavior: unknown[] }>;
+};
+
+export type CompanyInboxItem = {
+  id: string;
+  source: string;
+  subject: string;
+  body: string;
+  status: string;
+  assignedWorkerId?: string;
+  createdAt: string;
+};
+
+export type Decision = {
+  id: string;
+  decision: string;
+  reason: string;
+  status: string;
+  createdAt: string;
+};
+
 type JsonObject = Record<string, unknown>;
 
 const TOKEN_KEY = 'draken_access_token';
@@ -184,5 +295,140 @@ export async function executeCommand(
   return request(`/api/v1/companies/${companyId}/commands`, {
     method: 'POST',
     body: JSON.stringify(input),
+  });
+}
+
+export async function listWorkers(companyId: string): Promise<{ workers: Worker[] }> {
+  return request(`/api/v1/companies/${companyId}/workers`);
+}
+
+export async function createWorker(
+  companyId: string,
+  input: {
+    name: string;
+    title?: string;
+    role?: string;
+    description?: string;
+    autonomyLevel?: string;
+  },
+): Promise<{ worker: Worker }> {
+  return request(`/api/v1/companies/${companyId}/workers`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export async function getWorker(companyId: string, workerId: string): Promise<{ worker: Worker }> {
+  return request(`/api/v1/companies/${companyId}/workers/${workerId}`);
+}
+
+export async function listTraining(
+  companyId: string,
+  workerId: string,
+): Promise<{ lessons: TrainingLesson[] }> {
+  return request(`/api/v1/companies/${companyId}/workers/${workerId}/training`);
+}
+
+export async function proposeTraining(
+  companyId: string,
+  workerId: string,
+  input: {
+    title: string;
+    category: string;
+    lesson: string;
+    source: string;
+    examples?: unknown[];
+    correction?: string;
+  },
+): Promise<{ lesson: TrainingLesson }> {
+  return request(`/api/v1/companies/${companyId}/workers/${workerId}/training`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export async function reviewTraining(
+  companyId: string,
+  lessonId: string,
+  input: { feedback: string; decision: 'approve' | 'reject' | 'request_changes' },
+): Promise<{ lesson: TrainingLesson }> {
+  return request(`/api/v1/companies/${companyId}/training-lessons/${lessonId}/review`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export async function activateTraining(
+  companyId: string,
+  lessonId: string,
+): Promise<{ lesson: TrainingLesson }> {
+  return request(`/api/v1/companies/${companyId}/training-lessons/${lessonId}/activate`, {
+    method: 'POST',
+  });
+}
+
+export async function getWorkerPerformance(
+  companyId: string,
+  workerId: string,
+): Promise<{ performance: WorkerPerformance }> {
+  return request(`/api/v1/companies/${companyId}/workers/${workerId}/performance`);
+}
+
+export async function runWorker(
+  companyId: string,
+  workerId: string,
+  input: { prompt: string; triggerType?: string },
+): Promise<{ output: string; provider: string; model: string }> {
+  return request(`/api/v1/companies/${companyId}/workers/${workerId}/runs`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export async function listEvaluationSets(
+  companyId: string,
+): Promise<{ evaluationSets: EvaluationSet[] }> {
+  return request(`/api/v1/companies/${companyId}/evaluation-sets`);
+}
+
+export async function runEvaluationSet(
+  companyId: string,
+  evaluationSetId: string,
+  workerId: string,
+): Promise<JsonObject> {
+  return request(`/api/v1/companies/${companyId}/evaluation-sets/${evaluationSetId}/run`, {
+    method: 'POST',
+    body: JSON.stringify({ workerId }),
+  });
+}
+
+export async function listInbox(companyId: string): Promise<{ items: CompanyInboxItem[] }> {
+  return request(`/api/v1/companies/${companyId}/inbox`);
+}
+
+export async function listDecisions(companyId: string): Promise<{ decisions: Decision[] }> {
+  return request(`/api/v1/companies/${companyId}/decisions`);
+}
+
+export async function getCompanyShowcase(
+  companyId: string,
+): Promise<{ showcase: CompanyShowcase | null }> {
+  return request(`/api/v1/companies/${companyId}/showcase`);
+}
+
+export async function updateCompanyShowcase(
+  companyId: string,
+  input: {
+    enabled: boolean;
+    description?: string;
+    industry?: string;
+    mission?: string;
+    workflows?: unknown[];
+    metrics?: Record<string, unknown>;
+  },
+): Promise<{ updated: boolean }> {
+  return request(`/api/v1/companies/${companyId}/showcase`, {
+    method: 'PUT',
+    body: JSON.stringify({ workflows: [], metrics: {}, ...input }),
   });
 }

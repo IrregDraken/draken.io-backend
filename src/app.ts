@@ -29,6 +29,9 @@ import { TaskEngineService } from './services/taskEngine.js';
 import { registerGitHubRoutes } from './routes/github.js';
 import { CommandService } from './services/commandService.js';
 import { registerCommandRoutes } from './routes/command.js';
+import { WorkerRepository } from './repositories/workerRepository.js';
+import { WorkerRuntimeService } from './services/workerRuntime.js';
+import { registerPublicShowcaseRoutes, registerWorkerRoutes } from './routes/workers.js';
 
 export type Runtime = {
   app: FastifyInstance;
@@ -42,6 +45,7 @@ export async function buildApp(config: Config): Promise<Runtime> {
   const clients = createSupabaseClients(config);
   const repository = new CompanyRepository(clients.admin);
   const productRepository = new ProductRepository(clients.admin);
+  const workerRepository = new WorkerRepository(clients.admin);
   const authService = new AuthService(clients);
   const toolRegistry = new ToolRegistry();
   const toolExecutionService = new ToolExecutionService(productRepository, toolRegistry, logger);
@@ -52,6 +56,7 @@ export async function buildApp(config: Config): Promise<Runtime> {
     logger,
   );
   const providers = new AIProviderRegistry(config);
+  const workerRuntime = new WorkerRuntimeService(workerRepository, providers, logger);
   const commandService = new CommandService(providers, productRepository);
   const external = createExternalIntegrations(config);
   const health = new HealthService(clients, telegram, providers, external, logger);
@@ -115,6 +120,15 @@ export async function buildApp(config: Config): Promise<Runtime> {
     commands: commandService,
     logger,
   });
+  await registerWorkerRoutes(app, {
+    clients,
+    companyRepository: repository,
+    productRepository,
+    workerRepository,
+    runtime: workerRuntime,
+    logger,
+  });
+  await registerPublicShowcaseRoutes(app, workerRepository);
   await registerTelegramRoutes(app, { client: telegram, commands });
   const webRoot = path.resolve(config.webDir);
   if (existsSync(path.join(webRoot, 'index.html'))) {

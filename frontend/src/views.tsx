@@ -10,6 +10,13 @@ import {
   Toolbar,
 } from './components';
 import type { Notice as NoticeType, View } from './types';
+import {
+  CompanyInbox,
+  CompanyShowcase,
+  DecisionLog,
+  TrainingCenter,
+  WorkerWorkspace,
+} from './workerViews';
 
 export function ViewContent({
   view,
@@ -24,10 +31,15 @@ export function ViewContent({
   if (view === 'missions') return <Missions companyId={companyId} />;
   if (view === 'tasks') return <Tasks companyId={companyId} />;
   if (view === 'agents') return <Agents companyId={companyId} />;
+  if (view === 'workers') return <WorkerWorkspace companyId={companyId} />;
+  if (view === 'training') return <TrainingCenter companyId={companyId} />;
   if (view === 'departments') return <Departments companyId={companyId} />;
   if (view === 'activity') return <Activity companyId={companyId} />;
+  if (view === 'inbox') return <CompanyInbox companyId={companyId} />;
+  if (view === 'decisions') return <DecisionLog companyId={companyId} />;
   if (view === 'integrations') return <Integrations />;
   if (view === 'settings') return <Settings />;
+  if (view === 'showcase') return <CompanyShowcase companyId={companyId} />;
   return <CommandCenter companyId={companyId} />;
 }
 

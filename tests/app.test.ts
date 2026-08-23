@@ -48,4 +48,23 @@ describe('HTTP boundary', () => {
     expect(response.statusCode).toBe(503);
     expect(response.json().error).toBe('authentication_unconfigured');
   });
+
+  it('reports the public showcase as unconfigured instead of exposing or fabricating data', async () => {
+    const runtime = await buildApp(config);
+    runtimes.push(runtime);
+    const response = await runtime.app.inject({ method: 'GET', url: '/showcase/example-company' });
+    expect(response.statusCode).toBe(503);
+    expect(response.json().error).toBe('showcase_unconfigured');
+  });
+
+  it('registers worker routes behind the same authentication boundary', async () => {
+    const runtime = await buildApp(config);
+    runtimes.push(runtime);
+    const response = await runtime.app.inject({
+      method: 'GET',
+      url: '/api/v1/companies/00000000-0000-0000-0000-000000000000/workers',
+    });
+    expect(response.statusCode).toBe(503);
+    expect(response.json().error).toBe('authentication_unconfigured');
+  });
 });
