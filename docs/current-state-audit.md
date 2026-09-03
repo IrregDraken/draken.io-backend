@@ -53,3 +53,41 @@ The root project now includes a versioned React/Vite frontend under `frontend/`,
 The final quality gate passed: `pnpm typecheck:all`, `pnpm test` with 7 files and 21 tests, and `pnpm build:product`. The final runtime smoke test returned HTTP 200 for liveness and the static frontend, HTTP 503 for readiness because Supabase and most optional integrations were unconfigured, and HTTP 503 `authentication_unconfigured` for protected identity access. The sandbox OpenAI-compatible base URL was reachable through the configured base URL; its credential was not sent to `api.openai.com`.
 
 The Docker CLI and Supabase/PostgreSQL CLI were unavailable, so image build and live migration application remain deployment-owner steps. The frontend login and signup views were visually inspected in the browser and rendered successfully with the intended dark navy/gold command-room layout.
+
+## Verified 2026-09-03 audit addendum
+
+This addendum supersedes the historical repository-state claims above where they conflict with the current checkout. The current starting commit is `91a17345671dda145fb20fcb41e22131d7f590e9` on `main`.
+
+### A. What currently works
+
+The checked-out root is a TypeScript ESM Node.js 22 Fastify backend with a React/Vite frontend under `frontend/`. `src/app.ts` wires health, auth lifecycle, company/resource, product, GitHub, command, worker, public showcase, and Telegram routes. The backend includes Zod configuration validation, Helmet, CORS allow-listing, rate limiting, structured Pino logging with secret redaction, Supabase clients/repositories, company membership enforcement, and versioned Supabase migrations with RLS policies.
+
+The product layer currently includes domain and persistence support for companies, projects, missions, tasks, departments, workers, activity, inbox, decisions, evaluations, templates, tools, and orchestration records. The worker runtime keeps worker identity separate from AI provider identity, assembles approved runtime context, records runs and status transitions, and does not claim external model fine-tuning or real-world execution without configured tools and credentials.
+
+The AI provider abstraction has configured OpenAI-compatible, Anthropic, and Gemini adapters, with missing credentials represented as unconfigured states. Telegram polling/webhook handling, authenticated GitHub operations, external integration adapters, and tool execution boundaries are implemented. The frontend reads API state and presents loading, empty, error, and unconfigured states instead of invented company data. The separate `harolds_place/` subtree remains outside this architecture.
+
+### B. Incomplete or externally dependent systems
+
+Live Supabase migration/RLS/authentication tests require a real Supabase project and credentials. AI, Telegram, GitHub, Resend, Zapier, and Docker-sandbox operations require deployment credentials and/or reachable services. There is no safe default company owner or automatic company provisioning. There is no production scheduler or generalized durable workflow runner, and R.U.N.E persistent memory/orchestration is future scope.
+
+Docker packaging is statically present but was not run because Docker is unavailable in this sandbox. Readiness may perform remote health checks when integrations are configured, so it should be treated as an operational dependency signal rather than a substitute for deployment probes.
+
+### C. Problems found and disposition
+
+The principal issue found was documentation drift: the earlier body described a pre-frontend/pre-worker state and contradicted the current source tree. This addendum records the current state and is the authoritative correction for handoff. No broken imports, hardcoded secrets, or source-level architectural defect justified a rewrite. The failed `pnpm install --frozen-lockfile` created an untracked `pnpm-workspace.yaml` only because this sandbox rejects the `esbuild` build script; that generated artifact was removed and is not a repository change.
+
+### D. Prioritized plan
+
+**Critical:** apply migrations in a disposable Supabase project; exercise auth, memberships, RLS, and representative company/worker routes; configure deployment secrets through a secret manager.
+
+**Important:** add route-level integration tests against Supabase fixtures, document first-owner/company provisioning and frontend build/deploy steps, and keep this audit synchronized with implementation reports.
+
+**Future:** add policy-backed scheduling/workflows, persistent context and memory with a retention model, broader approval-backed tool orchestration, and R.U.N.E capabilities incrementally. Do not add these as empty placeholders.
+
+### Verification evidence for this checkout
+
+Direct installed-binary checks passed: Prettier formatting, ESLint, TypeScript typecheck, Vitest, and TypeScript build. Vitest reported **8 test files and 25 tests passed**. The normal pnpm command is currently blocked before execution by the sandbox's `ERR_PNPM_IGNORED_BUILDS` policy for `esbuild`; this is recorded as an environment limitation rather than masked by changing project dependency policy. Supabase and Docker remain unverified external-environment steps.
+
+### Next-agent rules
+
+Preserve Fastify, TypeScript, Supabase, the provider abstraction, company membership boundaries, and the existing frontend. Treat migrations/RLS as authoritative. Keep AI credentials in environment variables. Do not claim live integrations or autonomous execution without evidence. Keep `harolds_place/` separate. Update this audit and `docs/implementation-report.md` whenever verified scope changes.
