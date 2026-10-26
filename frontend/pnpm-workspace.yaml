@@ -1,0 +1,4 @@
+# Keep the frontend's standalone lockfile install deterministic.
+# Vite requires esbuild's platform binary installation script.
+allowBuilds:
+  esbuild: true
