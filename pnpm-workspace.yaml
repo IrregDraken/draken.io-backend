@@ -1,0 +1,4 @@
+# Explicitly allow the esbuild install script required by tsx and Vite.
+# Keep all other dependency lifecycle scripts blocked by default.
+allowBuilds:
+  esbuild: true
